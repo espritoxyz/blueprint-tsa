@@ -1,7 +1,9 @@
 import { Argv } from "yargs";
 import { existsSync } from "fs";
-import { generateTreeTable, TreeProperty } from "../draw.js";
-import { Sym, buildContracts, findCompiledContract } from "../util.js";
+import { generateTreeTable, TreeProperty } from "../common/draw.js";
+import { Sym } from "../common/constants.js";
+import { buildContracts } from "../common/blueprint-utils.js";
+import { findCompiledContract } from "../common/paths.js";
 import { CommandHandler, CommandContext } from "../cli.js";
 
 const drainCheckCommand: CommandHandler = async (context: CommandContext, parsedArgs: any) => {
