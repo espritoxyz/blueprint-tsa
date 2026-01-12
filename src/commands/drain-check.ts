@@ -6,9 +6,11 @@ import { CommandHandler, CommandContext } from "../cli.js";
 const drainCheckCommand: CommandHandler = async (context: CommandContext, parsedArgs: any) => {
   const { ui } = context;
 
-  const contract = parsedArgs.contract || "Unknown";
-  const timeout = parsedArgs.timeout || 30000;
-  const symbolic = parsedArgs.symbolic !== false;
+  if (!parsedArgs.contract) {
+    throw new Error("Contract name or path is required");
+  }
+  const contract = parsedArgs.contract;
+  const timeout = parsedArgs.timeout ?? null;
 
   const properties: TreeProperty[] = [
     { key: "Contract", value: contract },
@@ -17,8 +19,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
       key: "Options",
       separator: true,
       children: [
-        { key: "Timeout", value: `${timeout}ms` },
-        { key: "Contract data", value: symbolic ? "symbolic" : "concrete" },
+        { key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set" }
       ],
     },
   ];
@@ -45,19 +46,12 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
           alias: "t",
           type: "number",
           description: "Analysis timeout in milliseconds",
-          default: 30000,
         })
         .option("contract", {
           alias: "c",
           type: "string",
           description: "Contract name or path",
           demandOption: true,
-        })
-        .option("symbolic", {
-          alias: "s",
-          type: "boolean",
-          description: "Use symbolic execution",
-          default: true,
         }),
     handler: async (argv: any) => {
       await drainCheckCommand(context, argv);

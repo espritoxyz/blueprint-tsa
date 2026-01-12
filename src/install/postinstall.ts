@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * Postinstall script for blueprint-tsa
  * Runs after the package is installed
