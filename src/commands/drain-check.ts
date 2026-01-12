@@ -1,15 +1,25 @@
 import { Argv } from "yargs";
+import { existsSync } from "fs";
 import { generateTreeTable, TreeProperty } from "../draw.js";
-import { Sym } from "../util.js";
+import { Sym, buildContracts, findCompiledContract } from "../util.js";
 import { CommandHandler, CommandContext } from "../cli.js";
 
 const drainCheckCommand: CommandHandler = async (context: CommandContext, parsedArgs: any) => {
   const { ui } = context;
 
+  await buildContracts(ui);
+
   if (!parsedArgs.contract) {
     throw new Error("Contract name or path is required");
   }
   const contract = parsedArgs.contract;
+  const contractPath = findCompiledContract(contract);
+
+  if (!existsSync(contractPath)) {
+    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
+    process.exit(1);
+  }
+
   const timeout = parsedArgs.timeout ?? null;
 
   const properties: TreeProperty[] = [
@@ -25,6 +35,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   ];
 
   const output = generateTreeTable("Drain Check Analysis", properties);
+  ui.write("");
   ui.write(output);
   ui.write("");
   ui.setActionPrompt(`${Sym.WAIT} Running analysis...`);
