@@ -1,5 +1,5 @@
 import { findTSAHomeDirectory } from "../common/paths.js";
-import { downloadTarWithJava, apiLink } from "./java.js";
+import { downloadTarWithJava, unpackTarGz } from "./java.js";
 import path from "path";
 
 /**
@@ -15,8 +15,10 @@ const pause = (ms: number): Promise<void> => {
 
 async function main(): Promise<void> {
   const tsaHome = findTSAHomeDirectory();
-  console.log(apiLink);
-  await downloadTarWithJava(path.join(tsaHome, "jre.tar.gz"));
+  const archivePath = path.join(tsaHome, "jre.tar.gz");
+  const jrePath = path.join(tsaHome, "jre")
+  await downloadTarWithJava(archivePath);
+  await unpackTarGz(archivePath, jrePath);
 }
 
 main();

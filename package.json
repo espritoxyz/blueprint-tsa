@@ -20,6 +20,7 @@
     "@ton-community/func-js": "^0.11.0",
     "@ton/tolk-js": "^1.2.0",
     "@types/node": "^25.0.3",
+    "@types/tar": "^6.1.13",
     "@types/yargs": "^17.0.35",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
@@ -33,6 +34,7 @@
     "@ton/core": "^0.62.0",
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^16.1.0",
+    "tar": "^7.5.2",
     "yargs": "^17.7.2"
   }
 }
