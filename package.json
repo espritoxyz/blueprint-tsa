@@ -1,0 +1,38 @@
+{
+  "type": "module",
+  "name": "blueprint-tsa",
+  "version": "1.0.0",
+  "description": "TSA plugin for TON Blueprint",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "postinstall": "node dist/install/postinstall.js"
+  },
+  "devDependencies": {
+    "@tact-lang/compiler": "^1.6.13",
+    "@ton-community/func-js": "^0.11.0",
+    "@ton/tolk-js": "^1.2.0",
+    "@types/node": "^25.0.3",
+    "@types/yargs": "^17.0.35",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^9.13.0",
+    "globals": "^15.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@ton/blueprint": "^0.42.0",
+    "@ton/core": "^0.62.0",
+    "@ton/crypto": "^3.3.0",
+    "@ton/ton": "^16.1.0",
+    "yargs": "^17.7.2"
+  }
+}
