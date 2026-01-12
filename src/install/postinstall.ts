@@ -1,3 +1,7 @@
+import { findTSAHomeDirectory } from "../common/paths.js";
+import { downloadTarWithJava, apiLink } from "./java.js";
+import path from "path";
+
 /**
  * Postinstall script for blueprint-tsa
  * Runs after the package is installed
@@ -10,9 +14,9 @@ const pause = (ms: number): Promise<void> => {
 };
 
 async function main(): Promise<void> {
-  console.log("Installing blueprint-tsa...");
-  await pause(PAUSE_DURATION_MS);
-  // process.exit(2);
+  const tsaHome = findTSAHomeDirectory();
+  console.log(apiLink);
+  await downloadTarWithJava(path.join(tsaHome, "jre.tar.gz"));
 }
 
 main();
