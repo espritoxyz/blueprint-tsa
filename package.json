@@ -13,7 +13,7 @@
     "build": "tsc",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "postinstall": "node dist/install/postinstall.js"
+    "postinstall": "[ -d dist ] && node dist/install/postinstall.js || true"
   },
   "devDependencies": {
     "@tact-lang/compiler": "^1.6.13",
@@ -21,6 +21,7 @@
     "@ton/tolk-js": "^1.2.0",
     "@types/node": "^25.0.3",
     "@types/tar": "^6.1.13",
+    "@types/unzipper": "^0.10.9",
     "@types/yargs": "^17.0.35",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
@@ -35,6 +36,7 @@
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^16.1.0",
     "tar": "^7.5.2",
+    "unzipper": "^0.12.3",
     "yargs": "^17.7.2"
   }
 }

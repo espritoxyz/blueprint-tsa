@@ -4,11 +4,12 @@ import { downloadWithRedirect } from "./downloading.js";
 import fs from "fs";
 import path from "path";
 import * as tar from "tar";
+import { extractZip } from "./unzip.js";
 
-export const apiLink =
+const apiLink =
   `https://api.adoptium.net/v3/binary/latest/17/ga/${adoptiumOS}/${adoptiumArch}/jre/hotspot/normal/eclipse`;
 
-export const downloadTarWithJava = (filePath: string): Promise<void> => {
+const downloadArchiveWithJava = (filePath: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {
@@ -19,14 +20,18 @@ export const downloadTarWithJava = (filePath: string): Promise<void> => {
   });
 };
 
-export const unpackTarGz = (archivePath: string, extractPath: string): Promise<void> => {
+const unpackArchive = (archivePath: string, extractPath: string): Promise<void> => {
   if (!fs.existsSync(extractPath)) {
     fs.mkdirSync(extractPath, { recursive: true });
   }
-  return tar.extract({
-    file: archivePath,
-    cwd: extractPath,
-  });
+  if (archivePath.endsWith(".zip")) {
+    return extractZip(archivePath, extractPath);
+  } else {
+    return tar.extract({
+      file: archivePath,
+      cwd: extractPath,
+    });
+  }
 };
 
 export const ensureJavaInstalled = async (): Promise<string> => {
@@ -36,10 +41,11 @@ export const ensureJavaInstalled = async (): Promise<string> => {
   }
 
   const tsaHome = findTSAHomeDirectory();
-  const archivePath = path.join(tsaHome, "jre.tar.gz");
+  const archiveExtension = adoptiumOS === "windows" ? "zip" : "tar.gz";
+  const archivePath = path.join(tsaHome, `jre.${archiveExtension}`);
   const jrePath = path.join(tsaHome, "jre");
-  await downloadTarWithJava(archivePath);
-  await unpackTarGz(archivePath, jrePath);
+  await downloadArchiveWithJava(archivePath);
+  await unpackArchive(archivePath, jrePath);
   fs.unlinkSync(archivePath);
 
   const result = findJavaBinPath();
