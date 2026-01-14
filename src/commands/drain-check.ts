@@ -5,6 +5,7 @@ import { Sym } from "../common/constants.js";
 import { buildContracts } from "../common/blueprint-utils.js";
 import { findCompiledContract } from "../common/paths.js";
 import { CommandHandler, CommandContext } from "../cli.js";
+import { Analyzer } from "../common/analyzer.js";
 
 const drainCheckCommand: CommandHandler = async (context: CommandContext, parsedArgs: any) => {
   const { ui } = context;
@@ -44,6 +45,9 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
 
   // Simulate analysis delay
   await new Promise(resolve => setTimeout(resolve, 2000));
+
+//   const analyzer = await Analyzer.create();
+//   await analyzer.run([]);
 
   ui.clearActionPrompt();
   ui.write(`${Sym.OK} Analysis complete.`);

@@ -1,13 +1,6 @@
 type AdoptiumOS = "mac" | "linux" | "windows";
 type AdoptiumArch = "aarch64" | "x64";
 
-/**
- * Converts Node.js OS/arch to Adoptium naming.
- * @param osName - The operating system name (from process.platform)
- * @param arch - The architecture (from process.arch)
- * @returns A tuple of [AdoptiumOS, AdoptiumArch]
- * @throws Error if OS or architecture is unsupported
- */
 function mapPlatformToAdoptium(
   osName: string,
   arch: string
@@ -50,3 +43,23 @@ export const [adoptiumOS, adoptiumArch] = mapPlatformToAdoptium(
   process.platform,
   process.arch
 );
+
+export const mapOSToJavaBinary = (): string => {
+  let javaBinary: string;
+
+  switch (adoptiumOS) {
+  case "mac":
+    javaBinary = "java";
+    break;
+  case "linux":
+    javaBinary = "java";
+    break;
+  case "windows":
+    javaBinary = "java.exe";
+    break;
+  default:
+    throw new Error(`unsupported OS for java runtime bootstrap: ${adoptiumOS}`);
+  }
+
+  return javaBinary;
+};

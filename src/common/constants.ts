@@ -4,3 +4,5 @@ export class Sym {
   public static ERR = "❌";
   public static WAIT = "⏳";
 }
+
+export const TSA_VERSION = "v0.4.28-dev";
