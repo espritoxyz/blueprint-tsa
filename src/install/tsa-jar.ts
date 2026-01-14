@@ -1,4 +1,4 @@
-import { TSA_VERSION } from "../common/constants.js";
+import { TSA_VERSION, TSA_NAME } from "../common/constants.js";
 import { findTsaPath, findTSAHomeDirectory } from "../common/paths.js";
 import { downloadWithRedirect } from "./downloading.js";
 import path from "path";
@@ -11,7 +11,7 @@ export const ensureTsaInstalled = async (): Promise<string> => {
     return tsaPath;
   }
 
-  await downloadWithRedirect(TSA_URL, path.join(findTSAHomeDirectory(), "tsa-cli.jar"));
+  await downloadWithRedirect(TSA_URL, path.join(findTSAHomeDirectory(), TSA_NAME));
 
   const result = findTsaPath();
   if (result == null) {

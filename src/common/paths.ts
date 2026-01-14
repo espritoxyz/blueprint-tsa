@@ -2,6 +2,7 @@ import path from "path";
 import os from "os";
 import fs from "fs";
 import { mapOSToJavaBinary } from "../install/architecture.js";
+import { TSA_NAME } from "./constants.js"
 
 export const BUILD_DIR = path.join(process.cwd(), "build");
 
@@ -50,7 +51,7 @@ export const findJavaBinPath = (): string | null => {
 
 export const findTsaPath = (): string | null => {
   const tsaHome = findTSAHomeDirectory();
-  const result = path.join(tsaHome, "tsa-cli.jar");
+  const result = path.join(tsaHome, TSA_NAME);
 
   if (!fs.existsSync(result)) {
     return null;
