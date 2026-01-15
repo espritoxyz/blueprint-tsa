@@ -8,6 +8,8 @@ export const tsa: Runner = async (args: Args, ui: UIProvider) => {
   } catch (error) {
     if (error instanceof Error) {
       ui.write(`Error: ${error.message}`);
+    } else {
+      throw error;
     }
   }
 };

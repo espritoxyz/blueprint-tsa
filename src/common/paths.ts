@@ -2,7 +2,7 @@ import path from "path";
 import os from "os";
 import fs from "fs";
 import { mapOSToJavaBinary } from "../install/architecture.js";
-import { TSA_NAME } from "./constants.js"
+import { TSA_NAME } from "./constants.js";
 
 export const BUILD_DIR = path.join(process.cwd(), "build");
 
@@ -58,4 +58,8 @@ export const findTsaPath = (): string | null => {
   }
 
   return result;
+};
+
+export const getCheckerPath = (checkerName: string): string => {
+  return path.join(path.dirname(new URL(import.meta.url).pathname), "../../src/checkers", checkerName);
 };

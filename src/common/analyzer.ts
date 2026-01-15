@@ -17,23 +17,29 @@ export class Analyzer {
     return new Analyzer(javaPath, tsaJarPath);
   }
 
-  run(args: string[]): Promise<void> {
+  run(args: string[]): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       const allArgs = ["-jar", this.tsaJarPath, ...args];
       const proc = spawn(this.javaPath, allArgs);
 
+      let stdout = "";
+      let stderr = "";
+
       proc.stdout?.on("data", (data) => {
-        console.log(data.toString());
+        const chunk = data.toString();
+        stdout += chunk;
       });
 
       proc.stderr?.on("data", (data) => {
-        console.error(data.toString());
+        const chunk = data.toString();
+        stderr += chunk;
       });
 
       proc.on("close", (code) => {
         if (code === 0) {
-          resolve();
+          resolve({ stdout, stderr });
         } else {
+          console.error("\n" + stderr);
           reject(new Error(`Process exited with code ${code}`));
         }
       });

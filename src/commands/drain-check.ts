@@ -1,9 +1,11 @@
 import { Argv } from "yargs";
-import { existsSync } from "fs";
+import { existsSync, writeFileSync, unlinkSync } from "fs";
+import path from "path";
+import { tmpdir } from "os";
 import { generateTreeTable, TreeProperty } from "../common/draw.js";
-import { Sym } from "../common/constants.js";
-import { buildContracts } from "../common/blueprint-utils.js";
-import { findCompiledContract } from "../common/paths.js";
+import { Sym, DRAIN_CHECK_SYMBOLIC_FILENAME } from "../common/constants.js";
+import { buildContracts, compileFuncFile } from "../common/build-utils.js";
+import { findCompiledContract, getCheckerPath } from "../common/paths.js";
 import { CommandHandler, CommandContext } from "../cli.js";
 import { Analyzer } from "../common/analyzer.js";
 
@@ -20,6 +22,13 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
 
   if (!existsSync(contractPath)) {
     ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
+    process.exit(1);
+  }
+
+  const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
+
+  if (!existsSync(checkerPath)) {
+    ui.write(`\n${Sym.ERR} Checker file not found at ${checkerPath}`);
     process.exit(1);
   }
 
@@ -41,16 +50,41 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   ui.write("");
   ui.write(output);
   ui.write("");
-  ui.setActionPrompt(`${Sym.WAIT} Running analysis...`);
+  ui.setActionPrompt(`${Sym.WAIT} Compiling checker...`);
 
-  // Simulate analysis delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // Compile FunC to BoC
+  let bocCode: string;
+  try {
+    bocCode = await compileFuncFile(checkerPath, DRAIN_CHECK_SYMBOLIC_FILENAME);
+  } catch (error) {
+    ui.clearActionPrompt();
+    ui.write(`\n${Sym.ERR} Compilation failed: ${(error as Error).message}`);
+    process.exit(1);
+  }
 
-//   const analyzer = await Analyzer.create();
-//   await analyzer.run([]);
+  // Write BoC to temporary file
+  const tempBocPath = path.join(tmpdir(), `drain-check-${Date.now()}.boc`);
+  const bocBuffer = Buffer.from(bocCode, "base64");
+  writeFileSync(tempBocPath, bocBuffer);
 
-  ui.clearActionPrompt();
-  ui.write(`${Sym.OK} Analysis complete.`);
+  try {
+    ui.clearActionPrompt();
+    ui.setActionPrompt(`${Sym.WAIT} Running analysis...`);
+
+    // Simulate analysis delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const analyzer = await Analyzer.create();
+    await analyzer.run(["custom-checker"]);
+
+    ui.clearActionPrompt();
+    ui.write(`${Sym.OK} Analysis complete.`);
+  } finally {
+    // Clean up temporary BoC file
+    if (existsSync(tempBocPath)) {
+      unlinkSync(tempBocPath);
+    }
+  }
 };
 
 export const configureDrainCheckCommand = (context: CommandContext): any => {

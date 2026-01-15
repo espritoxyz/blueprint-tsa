@@ -15,7 +15,7 @@ export interface CommandHandler {
  * Main CLI router - parses subcommands and delegates to handlers
  */
 export const createCLI = (context: CommandContext) => {
-  const { args } = context;
+  const { args, ui } = context;
 
   const argv = args._.slice(1);
 
@@ -32,5 +32,13 @@ export const createCLI = (context: CommandContext) => {
     .demandCommand(1, "Please specify a subcommand")
     .help()
     .alias("help", "h")
-    .strict();
+    .strict()
+    .fail(async (msg, err, yargs) => {
+      if (err) {
+        throw err;
+      }
+      ui.write(`\nError: ${msg}`);
+      ui.write(await yargs.getHelp());
+      process.exit(1);
+    });
 };
