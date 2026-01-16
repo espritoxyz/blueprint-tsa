@@ -2,6 +2,7 @@ import { Argv } from "yargs";
 import { existsSync, writeFileSync, unlinkSync } from "fs";
 import path from "path";
 import { tmpdir } from "os";
+import { beginCell, getMethodId } from "@ton/core";
 import { generateTreeTable, TreeProperty } from "../common/draw.js";
 import { Sym, DRAIN_CHECK_SYMBOLIC_FILENAME } from "../common/constants.js";
 import { buildContracts, compileFuncFile } from "../common/build-utils.js";
@@ -67,19 +68,45 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   const bocBuffer = Buffer.from(bocCode, "base64");
   writeFileSync(tempBocPath, bocBuffer);
 
+  let nonceMethodId = 0;
+  if (parsedArgs.nonce) {
+    nonceMethodId = getMethodId(parsedArgs.nonce);
+  }
+
+  const checkerCell = beginCell()
+    .storeUint(nonceMethodId, 32)
+    .storeUint(0, 64)
+    .endCell();
+  const checkerCellBoc = checkerCell.toBoc();
+  const tempCheckerCellPath = path.join(tmpdir(), `empty-cell-${Date.now()}.boc`);
+  writeFileSync(tempCheckerCellPath, checkerCellBoc);
+
   try {
     ui.clearActionPrompt();
     ui.setActionPrompt(`${Sym.WAIT} Running analysis...`);
 
     const analyzer = await Analyzer.create();
-    await analyzer.run(["custom-checker-compiled", "--checker", tempBocPath, "--contract", contractPath, "--stop-when-exit-codes-found", "1000"]);
+    await analyzer.run([
+      "custom-checker-compiled",
+      "--checker",
+      tempBocPath,
+      "--contract",
+      contractPath,
+      "--stop-when-exit-codes-found",
+      "1000",
+      "--checker-data",
+      tempCheckerCellPath,
+    ]);
 
     ui.clearActionPrompt();
     ui.write(`${Sym.OK} Analysis complete.`);
   } finally {
-    // Clean up temporary BoC file
+    // Clean up temporary BoC files
     if (existsSync(tempBocPath)) {
       unlinkSync(tempBocPath);
+    }
+    if (existsSync(tempCheckerCellPath)) {
+      unlinkSync(tempCheckerCellPath);
     }
   }
 };
@@ -94,6 +121,10 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
           alias: "t",
           type: "number",
           description: "Analysis timeout in milliseconds",
+        })
+        .option("nonce", {
+          type: "string",
+          description: "Name of get-method for extracting nonce in C4",
         })
         .option("contract", {
           alias: "c",

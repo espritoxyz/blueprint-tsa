@@ -38,7 +38,8 @@ export const createCLI = (context: CommandContext) => {
         throw err;
       }
       ui.write(`\nError: ${msg}`);
-      ui.write(await yargs.getHelp());
+      ui.write("");
+      yargs.showHelp(s => ui.write(s));
       process.exit(1);
     });
 };

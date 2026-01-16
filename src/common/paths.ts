@@ -14,6 +14,14 @@ export const findTSAHomeDirectory = (): string => {
   return tsaDir;
 };
 
+export const findTSAProjectDirectory = (): string => {
+  const tsaDir = path.join(process.cwd(), "tsa");
+  if (!fs.existsSync(tsaDir)) {
+    fs.mkdirSync(tsaDir, { recursive: true });
+  }
+  return tsaDir;
+};
+
 export const findCompiledContract = (name: string): string => {
   return path.join(BUILD_DIR, name + ".compiled.json");
 };

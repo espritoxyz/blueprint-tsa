@@ -26,13 +26,13 @@ export class Analyzer {
       let stderr = "";
 
       proc.stdout?.on("data", (data) => {
-        // console.log(data.toString());
+        console.log(data.toString());
         const chunk = data.toString();
         stdout += chunk;
       });
 
       proc.stderr?.on("data", (data) => {
-        // console.error(data.toString());
+        console.error(data.toString());
         const chunk = data.toString();
         stderr += chunk;
       });
