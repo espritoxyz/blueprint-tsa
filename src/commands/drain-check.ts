@@ -71,11 +71,8 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     ui.clearActionPrompt();
     ui.setActionPrompt(`${Sym.WAIT} Running analysis...`);
 
-    // Simulate analysis delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
     const analyzer = await Analyzer.create();
-    await analyzer.run(["custom-checker"]);
+    await analyzer.run(["custom-checker-compiled", "--checker", tempBocPath, "--contract", contractPath, "--stop-when-exit-codes-found", "1000"]);
 
     ui.clearActionPrompt();
     ui.write(`${Sym.OK} Analysis complete.`);
