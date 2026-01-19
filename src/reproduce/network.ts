@@ -1,17 +1,18 @@
 import { Cell, toNano, contractAddress, beginCell, StateInit, Address } from '@ton/core';
 import { NetworkProvider, UIProvider } from "@ton/blueprint";
-import { Sym } from "../common/constants.js"
+import { Sym } from "../common/constants.js";
+import { ReproduceConfig } from "./tsa-reproduce.js";
 
-export const deploy = async (network: NetworkProvider, ui: UIProvider, code: Cell, data: Cell, balance: bigint) => {
+export const deploy = async (network: NetworkProvider, ui: UIProvider, config: ReproduceConfig) => {
   const stateInit: StateInit = {
-    code,
-    data,
+    code: config.code,
+    data: config.data,
   };
 
   const address = contractAddress(0, stateInit);
 
   let isDeployed = await network.isContractDeployed(address);
-  let suggestedValue = balance;
+  let suggestedValue = config.suggestedBalance;
 
   if (isDeployed) {
     const state = await network.getContractState(address);
@@ -30,7 +31,7 @@ export const deploy = async (network: NetworkProvider, ui: UIProvider, code: Cel
       if (actualData) {
         const actualDataCell = Cell.fromBoc(actualData)[0];
 
-        const isDataMatching = actualDataCell.equals(data);
+        const isDataMatching = actualDataCell.equals(config.data);
 
         if (!isDataMatching) {
           ui.write(`${Sym.ERR} Contract at ${address} is already deployed and its data does not match expected data.`);
@@ -94,7 +95,7 @@ export const deploy = async (network: NetworkProvider, ui: UIProvider, code: Cel
    let dataMatches = false;
    if (state.state.data) {
        const actualData = Cell.fromBoc(state.state.data)[0];
-       dataMatches = actualData.equals(data);
+       dataMatches = actualData.equals(config.data);
    }
 
    if (!dataMatches) {
@@ -107,13 +108,13 @@ export const deploy = async (network: NetworkProvider, ui: UIProvider, code: Cel
    return address;
 }
 
-export const reproduce = async (network: NetworkProvider, ui: UIProvider, address: Address, body: Cell, value: bigint) => {
-  const suggestedValue = Number(value) / 1e9
+export const reproduce = async (network: NetworkProvider, ui: UIProvider, address: Address, config: ReproduceConfig) => {
+  const suggestedValue = Number(config.suggestedValue) / 1e9
   const tonsForReproduce = await ui.input(`Enter amount of TONs for reproduce message (suggested: ${suggestedValue}):`);
   await network.sender().send({
     to: address,
     value: toNano(tonsForReproduce),
-    body: body,
+    body: config.msgBody,
   });
 
   await network.waitForLastTransaction(40);
