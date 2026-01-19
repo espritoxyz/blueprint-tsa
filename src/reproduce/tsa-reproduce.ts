@@ -2,7 +2,7 @@ import arg from 'arg';
 import { readFileSync } from 'fs';
 import { Cell, beginCell } from '@ton/core';
 import { Runner, Args, UIProvider, createNetworkProvider } from "@ton/blueprint";
-import { deployAndReproduce } from "./network.js";
+import { deploy, reproduce } from "./network.js";
 
 const argSpec = {
     '--mainnet': Boolean,
@@ -24,7 +24,8 @@ export const tsaReproduce: Runner = async (args: Args, ui: UIProvider) => {
 
     const network = await createNetworkProvider(ui, arg(argSpec));
 
-    await deployAndReproduce(network, ui, codeCell, Cell.fromBoc(Buffer.from("b5ee9c7201010101000a0000100000234c00000000", "hex"))[0]);
+    const address = await deploy(network, ui, codeCell, beginCell().endCell(), 100000n);
+    await reproduce(network, ui, address, beginCell().endCell(), 100000n);
 
   } catch (error) {
     if (error instanceof Error) {

@@ -1,8 +1,8 @@
-import { Cell, toNano, contractAddress, beginCell, StateInit } from '@ton/core';
+import { Cell, toNano, contractAddress, beginCell, StateInit, Address } from '@ton/core';
 import { NetworkProvider, UIProvider } from "@ton/blueprint";
 import { Sym } from "../common/constants.js"
 
-export const deployAndReproduce = async (network: NetworkProvider, ui: UIProvider, code: Cell, data: Cell) => {
+export const deploy = async (network: NetworkProvider, ui: UIProvider, code: Cell, data: Cell, balance: bigint) => {
   const stateInit: StateInit = {
     code,
     data,
@@ -10,9 +10,8 @@ export const deployAndReproduce = async (network: NetworkProvider, ui: UIProvide
 
   const address = contractAddress(0, stateInit);
 
-  let valueMessage = "Enter amount of TONs for deployment and reproduction message:"
-
   let isDeployed = await network.isContractDeployed(address);
+  let suggestedValue = balance;
 
   if (isDeployed) {
     const state = await network.getContractState(address);
@@ -22,6 +21,8 @@ export const deployAndReproduce = async (network: NetworkProvider, ui: UIProvide
 
     } else if (state.state.type == "uninit") {
       isDeployed = false;
+      ui.write(`Contract at ${address} is uninit. Current balance: ${state.balance}.`);
+      suggestedValue -= state.balance;
 
     } else if (state.state.type == "active") {
       const actualData = state.state.data;
@@ -35,8 +36,26 @@ export const deployAndReproduce = async (network: NetworkProvider, ui: UIProvide
           ui.write(`${Sym.ERR} Contract at ${address} is already deployed and its data does not match expected data.`);
           process.exit(1);
         } else {
-          ui.write(`Contract is already deployed and its data matches with the expected one.`);
-          valueMessage = "Enter amount of TONs for reproduction message:"
+          ui.write(`Contract at ${address} is already deployed and its data matches with the expected one.`);
+          ui.write(`Current balance: ${state.balance}.`)
+          const proceed = await ui.choose(
+            "Do you want to send more TONs?",
+            [
+              {
+                "name": "Yes",
+                "value": true,
+              },
+              {
+                "name": "No",
+                "value": false,
+              },
+            ],
+            (c) => c.name,
+          )
+          if (!proceed.value) {
+            return address;
+          }
+          suggestedValue -= state.balance;
         }
       } else {
         ui.write(`${Sym.ERR} Contract at ${address} is already deployed. Cannot extract contract data to compare.`);
@@ -47,7 +66,13 @@ export const deployAndReproduce = async (network: NetworkProvider, ui: UIProvide
     }
   }
 
-  const tonsForDeploy = await ui.input(valueMessage);
+  if (suggestedValue < 0n) {
+    suggestedValue = 0n;
+  }
+  const suggestedValueInTons = Number(suggestedValue) / 1e9;
+
+  const tonsForDeploy =
+    await ui.input(`Enter amount of TONs for deployment message (suggested: ${suggestedValueInTons} + fees):`);
 
   await network.sender().send({
     to: address,
@@ -60,4 +85,38 @@ export const deployAndReproduce = async (network: NetworkProvider, ui: UIProvide
   } else {
     await network.waitForLastTransaction(40);
   }
+
+   const state = await network.getContractState(address);
+   if (state.state.type != "active") {
+     throw new Error("Unexpected contract state");
+   }
+
+   let dataMatches = false;
+   if (state.state.data) {
+       const actualData = Cell.fromBoc(state.state.data)[0];
+       dataMatches = actualData.equals(data);
+   }
+
+   if (!dataMatches) {
+     ui.write(`${Sym.ERR} Contract data changed after receiving deployment message.`);
+     process.exit(1);
+   }
+
+   ui.write(`${Sym.OK} Contract ${address} deployed. Balance: ${state.balance}.`);
+
+   return address;
+}
+
+export const reproduce = async (network: NetworkProvider, ui: UIProvider, address: Address, body: Cell, value: bigint) => {
+  const suggestedValue = Number(value) / 1e9
+  const tonsForReproduce = await ui.input(`Enter amount of TONs for reproduce message (suggested: ${suggestedValue}):`);
+  await network.sender().send({
+    to: address,
+    value: toNano(tonsForReproduce),
+    body: body,
+  });
+
+  await network.waitForLastTransaction(40);
+
+  ui.write(`${Sym.OK} Reproduction message sent!`);
 }
