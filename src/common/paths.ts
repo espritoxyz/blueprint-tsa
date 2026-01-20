@@ -93,19 +93,24 @@ export const getCheckerPath = (checkerName: string): string => {
 export const getSarifReportPath = (id: string): string => {
   const reportDir = getReportDirectory(id);
   return path.join(reportDir, "report.sarif");
-}
+};
 
 export const getSummaryPath = (id: string): string => {
   const reportDir = getReportDirectory(id);
   return path.join(reportDir, "summary.txt");
-}
+};
 
 export const getInputsPath = (id: string, index: number): string => {
   const reportDir = getReportDirectory(id);
   return path.join(reportDir, `execution_${index}`);
-}
+};
+
+export const getReproduceConfigPath = (id: string): string => {
+  const reportDir = getReportDirectory(id);
+  return path.join(reportDir, "tsa-reproduce-config.json");
+};
 
 export const getContractDataBocPath = (id: string, index: number): string => {
   const inputsPath = getInputsPath(id, index);
   return path.join(path.join(inputsPath, "c4_1"), "cell.boc");
-}
+};

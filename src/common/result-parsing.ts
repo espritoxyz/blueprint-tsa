@@ -20,4 +20,4 @@ export const getMessageValue = (sarifPath: string, index: number): bigint => {
   const results = parsedObject.runs[0].results || [];
   const result = results[index];
   return BigInt(result.properties.additionalInputs["0"].msgValue);
-}
+};

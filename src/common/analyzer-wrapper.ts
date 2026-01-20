@@ -3,7 +3,7 @@ import path from "path";
 import { tmpdir } from "os";
 import { UIProvider } from "@ton/blueprint";
 import { Cell } from "@ton/core";
-import { Sym } from "./constants.js";
+import { Sym, ANALYSIS_INFO_TITLE } from "./constants.js";
 import { compileFuncFile } from "./build-utils.js";
 import { Analyzer } from "./analyzer.js";
 import { generateTreeTable, TreeProperty } from "./draw.js";
@@ -22,7 +22,7 @@ export interface AnalyzerWrapperConfig {
   ui: UIProvider;
   checkerPath: string;
   checkerCell: Cell;
-  properties?: TreeProperty[];
+  properties: TreeProperty[];
   codePath: string;
 }
 
@@ -53,8 +53,8 @@ export class AnalyzerWrapper {
   private generateId(): string {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
     const startOfDay = new Date(year, now.getMonth(), now.getDate());
     const milliseconds = now.getTime() - startOfDay.getTime();
 
@@ -69,7 +69,7 @@ export class AnalyzerWrapper {
       return;
     }
 
-    const output = generateTreeTable("TSA analysis", this.config.properties);
+    const output = generateTreeTable(ANALYSIS_INFO_TITLE, this.config.properties);
     this.config.ui.write("");
     this.config.ui.write(output);
     this.config.ui.write("");
@@ -184,7 +184,7 @@ export class AnalyzerWrapper {
 
     const reportLines = [
       `${Sym.WARN} Vulnerability found!`,
-      `Summary Path: ${summaryPath}`,
+      `Summary path: ${summaryPath}`,
       `Input message body and contract data: ${getInputsPath(this.id, index)}`,
       `SARIF with full information: ${sarifPath}`,
       "",
@@ -195,7 +195,8 @@ export class AnalyzerWrapper {
       this.config.ui.write(line);
     }
 
-    const report = reportLines.join("\n");
+    const analysisInfo = generateTreeTable(ANALYSIS_INFO_TITLE, this.config.properties);
+    const report = analysisInfo + "\n\n" + reportLines.join("\n");
     writeFileSync(summaryPath, report);
 
     const dataPath = getContractDataBocPath(this.id, index);

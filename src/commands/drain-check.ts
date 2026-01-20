@@ -1,3 +1,4 @@
+import path from "path";
 import { Argv } from "yargs";
 import { existsSync } from "fs";
 import { beginCell, getMethodId } from "@ton/core";
@@ -6,6 +7,7 @@ import { CommandHandler, CommandContext } from "../cli.js";
 import { ReproduceConfig } from "../reproduce/network.js";
 import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
+import { writeReproduceConfig } from "../reproduce/build-config.js";
 import {
   Sym,
   DRAIN_CHECK_SYMBOLIC_FILENAME,
@@ -18,7 +20,8 @@ import {
   findCompiledContract,
   getCheckerPath,
   getSarifReportPath,
-  getReportDirectory
+  getReportDirectory,
+  getReproduceConfigPath,
 } from "../common/paths.js";
 
 export const configureDrainCheckCommand = (context: CommandContext): any => {
@@ -118,7 +121,19 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   ]);
 
   const vulnerability = analyzer.reportVulnerability();
-  console.log(vulnerability);
+
+  ui.write("To clean reports, run:");
+  ui.write("> yarn blueprint tsa clean");
+  ui.write("");
+
+  if (vulnerability != null) {
+    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id);
+    const configPath = getReproduceConfigPath(analyzer.id);
+    const relativeConfigPath = path.relative(process.cwd(), configPath);
+    ui.write("To reproduce vulnerability on the blockchain, run:");
+    ui.write(`> yarn blueprint tsa-reproduce ${relativeConfigPath}`);
+    ui.write("");
+  }
 };
 
 export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promise<ReproduceConfig> => {
@@ -170,7 +185,6 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     "--checker-data",
     wrapper.getTempCheckerCellPath(),
     "--output",
-    getSarifReportPath(wrapper.id),
     getSarifReportPath(wrapper.id),
     ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
   ]);

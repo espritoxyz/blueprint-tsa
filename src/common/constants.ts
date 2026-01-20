@@ -16,3 +16,5 @@ export const DRAIN_CHECK_ID = "drain-check";
 export const ERROR_EXIT_CODE = 1000;
 export const EXPECTED_MESSAGE_IN_SARIF =
   `TvmFailure(exit=TVM user defined error with exit code ${ERROR_EXIT_CODE}, phase=TvmComputePhase)`;
+
+export const ANALYSIS_INFO_TITLE = "TSA analysis";
