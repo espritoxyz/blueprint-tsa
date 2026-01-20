@@ -1,4 +1,4 @@
-import { Cell, toNano, contractAddress, beginCell, StateInit, Address } from '@ton/core';
+import { Cell, toNano, contractAddress, StateInit, Address } from "@ton/core";
 import { NetworkProvider, UIProvider } from "@ton/blueprint";
 import { Sym } from "../common/constants.js";
 import { ReproduceConfig } from "./tsa-reproduce.js";
@@ -38,7 +38,7 @@ export const deploy = async (network: NetworkProvider, ui: UIProvider, config: R
           process.exit(1);
         } else {
           ui.write(`Contract at ${address} is already deployed and its data matches with the expected one.`);
-          ui.write(`Current balance: ${state.balance}.`)
+          ui.write(`Current balance: ${state.balance}.`);
           const proceed = await ui.choose(
             "Do you want to send more TONs?",
             [
@@ -52,7 +52,7 @@ export const deploy = async (network: NetworkProvider, ui: UIProvider, config: R
               },
             ],
             (c) => c.name,
-          )
+          );
           if (!proceed.value) {
             return address;
           }
@@ -87,29 +87,29 @@ export const deploy = async (network: NetworkProvider, ui: UIProvider, config: R
     await network.waitForLastTransaction(40);
   }
 
-   const state = await network.getContractState(address);
-   if (state.state.type != "active") {
-     throw new Error("Unexpected contract state");
-   }
+  const state = await network.getContractState(address);
+  if (state.state.type != "active") {
+    throw new Error("Unexpected contract state");
+  }
 
-   let dataMatches = false;
-   if (state.state.data) {
-       const actualData = Cell.fromBoc(state.state.data)[0];
-       dataMatches = actualData.equals(config.data);
-   }
+  let dataMatches = false;
+  if (state.state.data) {
+    const actualData = Cell.fromBoc(state.state.data)[0];
+    dataMatches = actualData.equals(config.data);
+  }
 
-   if (!dataMatches) {
-     ui.write(`${Sym.ERR} Contract data changed after receiving deployment message.`);
-     process.exit(1);
-   }
+  if (!dataMatches) {
+    ui.write(`${Sym.ERR} Contract data changed after receiving deployment message.`);
+    process.exit(1);
+  }
 
-   ui.write(`${Sym.OK} Contract ${address} deployed. Balance: ${state.balance}.`);
+  ui.write(`${Sym.OK} Contract ${address} deployed. Balance: ${state.balance}.`);
 
-   return address;
-}
+  return address;
+};
 
 export const reproduce = async (network: NetworkProvider, ui: UIProvider, address: Address, config: ReproduceConfig) => {
-  const suggestedValue = Number(config.suggestedValue) / 1e9
+  const suggestedValue = Number(config.suggestedValue) / 1e9;
   const tonsForReproduce = await ui.input(`Enter amount of TONs for reproduce message (suggested: ${suggestedValue}):`);
   await network.sender().send({
     to: address,
@@ -120,4 +120,4 @@ export const reproduce = async (network: NetworkProvider, ui: UIProvider, addres
   await network.waitForLastTransaction(40);
 
   ui.write(`${Sym.OK} Reproduction message sent!`);
-}
+};
