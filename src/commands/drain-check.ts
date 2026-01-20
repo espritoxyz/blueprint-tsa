@@ -130,7 +130,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id);
     const configPath = getReproduceConfigPath(analyzer.id);
     const relativeConfigPath = path.relative(process.cwd(), configPath);
-    ui.write("To reproduce vulnerability on the blockchain, run:");
+    ui.write("To reproduce the vulnerability on the blockchain, run:");
     ui.write(`> yarn blueprint tsa-reproduce ${relativeConfigPath}`);
 
     process.exit(2);

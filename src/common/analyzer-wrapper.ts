@@ -7,7 +7,7 @@ import { Sym, ANALYSIS_INFO_TITLE } from "./constants.js";
 import { compileFuncFile } from "./build-utils.js";
 import { Analyzer } from "./analyzer.js";
 import { generateTreeTable, TreeProperty } from "./draw.js";
-import { findExploitExecutionIndex, getMessageValue } from "./result-parsing.js";
+import { findExploitExecutionIndex, getMessageValue, getInitialBalance } from "./result-parsing.js";
 import {
   getSummaryPath,
   getSarifReportPath,
@@ -28,6 +28,7 @@ export interface AnalyzerWrapperConfig {
 
 export interface VulnerabilityDescription {
   value: bigint;
+  balance: bigint;
   dataPath: string;
   codePath: string;
 }
@@ -201,9 +202,11 @@ export class AnalyzerWrapper {
 
     const dataPath = getContractDataBocPath(this.id, index);
     const value = getMessageValue(sarifPath, index);
+    const balance = getInitialBalance(sarifPath, index);
 
     return {
       value,
+      balance,
       dataPath,
       codePath: this.config.codePath,
     };

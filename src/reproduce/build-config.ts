@@ -14,7 +14,7 @@ export const writeReproduceConfig = (
     codePath: vulnerability.codePath,
     dataPath: vulnerability.dataPath,
     suggestedValue: vulnerability.value.toString(),
-    suggestedBalance: "0",
+    suggestedBalance: vulnerability.balance.toString(),
     timeout,
   };
   const filePath = getReproduceConfigPath(id);

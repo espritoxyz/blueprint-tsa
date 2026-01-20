@@ -7,7 +7,7 @@ export const configureCleanCommand = (): any => {
     command: "clean",
     description: "Clean directory with reports",
     builder: (yargs: Argv) => yargs,
-    handler: async (argv: any) => {
+    handler: async (_argv: any) => {
       await cleanCommand();
     },
   };
