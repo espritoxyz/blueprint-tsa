@@ -1,9 +1,23 @@
 import { Cell, toNano, contractAddress, StateInit, Address } from "@ton/core";
 import { NetworkProvider, UIProvider } from "@ton/blueprint";
 import { Sym } from "../common/constants.js";
-import { ReproduceConfig } from "./tsa-reproduce.js";
 
-export const deploy = async (network: NetworkProvider, ui: UIProvider, config: ReproduceConfig) => {
+export interface DeployConfig {
+  code: Cell;
+  data: Cell;
+  suggestedBalance: bigint;
+  suggestedValue: bigint;
+  deploymentMessage: Cell;
+}
+
+export interface DeployResult {
+  address: Address;
+  balance: bigint;
+}
+
+export const deploy = async (network: NetworkProvider, config: DeployConfig): Promise<DeployResult> => {
+  const ui = network.ui();
+
   const stateInit: StateInit = {
     code: config.code,
     data: config.data,
@@ -54,7 +68,7 @@ export const deploy = async (network: NetworkProvider, ui: UIProvider, config: R
             (c) => c.name,
           );
           if (!proceed.value) {
-            return address;
+            return { address, balance: state.balance };
           }
           suggestedValue -= state.balance;
         }
@@ -105,14 +119,21 @@ export const deploy = async (network: NetworkProvider, ui: UIProvider, config: R
 
   ui.write(`${Sym.OK} Contract ${address} deployed. Balance: ${state.balance}.`);
 
-  return address;
+  return { address, balance: state.balance };
 };
 
-export const reproduce = async (network: NetworkProvider, ui: UIProvider, address: Address, config: ReproduceConfig) => {
+export interface ReproduceConfig {
+  address: Address;
+  msgBody: Cell;
+  suggestedValue: bigint;
+}
+
+export const reproduce = async (network: NetworkProvider, config: ReproduceConfig) => {
+  const ui = network.ui();
   const suggestedValue = Number(config.suggestedValue) / 1e9;
   const tonsForReproduce = await ui.input(`Enter amount of TONs for reproduce message (suggested: ${suggestedValue}):`);
   await network.sender().send({
-    to: address,
+    to: config.address,
     value: toNano(tonsForReproduce),
     body: config.msgBody,
   });
