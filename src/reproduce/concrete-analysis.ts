@@ -21,4 +21,4 @@ export const runConcreteAnalysis = async (mode: string, config: ConcreteAnalysis
     ui.write(`${Sym.ERR} Invalid command: ${mode}`);
     process.exit(1);
   }
-}
+};

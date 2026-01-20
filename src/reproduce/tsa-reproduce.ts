@@ -47,7 +47,7 @@ export const tsaReproduce: Runner = async (args: Args, ui: UIProvider) => {
         contractAddress: deployResult.address,
         senderAddress: senderAddress,
         ui: ui,
-        timeout: configJson.timeout,
+        timeout: configJson.timeout ?? null,
       };
 
       await runConcreteAnalysis(configJson.command, concreteAnalysisConfig);

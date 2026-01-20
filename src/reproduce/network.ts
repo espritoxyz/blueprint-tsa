@@ -1,5 +1,5 @@
 import { Cell, toNano, contractAddress, StateInit, Address } from "@ton/core";
-import { NetworkProvider, UIProvider } from "@ton/blueprint";
+import { NetworkProvider } from "@ton/blueprint";
 import { Sym } from "../common/constants.js";
 
 export interface DeployConfig {
@@ -53,8 +53,9 @@ export const deploy = async (network: NetworkProvider, config: DeployConfig): Pr
         } else {
           ui.write(`Contract at ${address} is already deployed and its data matches with the expected one.`);
           ui.write(`Current balance: ${state.balance}.`);
+          const suggestedBalance =  Number(config.suggestedBalance) / 1e9;
           const proceed = await ui.choose(
-            "Do you want to send more TONs?",
+            `Do you want to send more TONs? (suggested balance: ${suggestedBalance})`,
             [
               {
                 "name": "Yes",

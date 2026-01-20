@@ -1,16 +1,14 @@
 import { Argv } from "yargs";
-import { existsSync, writeFileSync, unlinkSync } from "fs";
-import path from "path";
-import { tmpdir } from "os";
+import { existsSync } from "fs";
 import { beginCell, getMethodId } from "@ton/core";
-import { generateTreeTable, TreeProperty } from "../common/draw.js";
+import { TreeProperty } from "../common/draw.js";
 import { Sym, DRAIN_CHECK_SYMBOLIC_FILENAME, DRAIN_CHECK_ID, DRAIN_CHECK_CONCRETE_FILENAME } from "../common/constants.js";
-import { buildContracts, compileFuncFile } from "../common/build-utils.js";
+import { buildContracts } from "../common/build-utils.js";
 import { findCompiledContract, getCheckerPath } from "../common/paths.js";
 import { CommandHandler, CommandContext } from "../cli.js";
-import { Analyzer } from "../common/analyzer.js";
 import { ReproduceConfig } from "../reproduce/network.js";
 import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
+import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 
 export const configureDrainCheckCommand = (context: CommandContext): any => {
   return {
@@ -56,17 +54,11 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   }
 
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
-
-  if (!existsSync(checkerPath)) {
-    ui.write(`\n${Sym.ERR} Checker file not found at ${checkerPath}`);
-    process.exit(1);
-  }
-
   const timeout = parsedArgs.timeout ?? null;
 
   const properties: TreeProperty[] = [
     { key: "Contract", value: contract },
-    { key: "TSA mode", value: "TON drain" },
+    { key: "Mode", value: "TON drain" },
     {
       key: "Options",
       separator: true,
@@ -75,27 +67,6 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
       ],
     },
   ];
-
-  const output = generateTreeTable("Drain Check Analysis", properties);
-  ui.write("");
-  ui.write(output);
-  ui.write("");
-  ui.setActionPrompt(`${Sym.WAIT} Compiling checker...`);
-
-  // Compile FunC to BoC
-  let bocCode: string;
-  try {
-    bocCode = await compileFuncFile(checkerPath, DRAIN_CHECK_SYMBOLIC_FILENAME);
-  } catch (error) {
-    ui.clearActionPrompt();
-    ui.write(`\n${Sym.ERR} Compilation failed: ${(error as Error).message}`);
-    process.exit(1);
-  }
-
-  // Write BoC to temporary file
-  const tempBocPath = path.join(tmpdir(), `drain-check-${Date.now()}.boc`);
-  const bocBuffer = Buffer.from(bocCode, "base64");
-  writeFileSync(tempBocPath, bocBuffer);
 
   let nonceMethodId = 0;
   if (parsedArgs.nonce) {
@@ -106,38 +77,25 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     .storeUint(nonceMethodId, 32)
     .storeUint(0, 64)
     .endCell();
-  const checkerCellBoc = checkerCell.toBoc();
-  const tempCheckerCellPath = path.join(tmpdir(), `c4-cell-${Date.now()}.boc`);
-  writeFileSync(tempCheckerCellPath, checkerCellBoc);
 
-  try {
-    ui.clearActionPrompt();
-    ui.setActionPrompt(`${Sym.WAIT} Running analysis...`);
+  const analyzer = new AnalyzerWrapper({
+    ui,
+    checkerPath,
+    checkerCell,
+    properties,
+  });
 
-    const analyzer = await Analyzer.create();
-    await analyzer.run([
-      "custom-checker-compiled",
-      "--checker",
-      tempBocPath,
-      "--contract",
-      contractPath,
-      "--stop-when-exit-codes-found",
-      "1000",
-      "--checker-data",
-      tempCheckerCellPath,
-    ]);
-
-    ui.clearActionPrompt();
-    ui.write(`${Sym.OK} Analysis complete.`);
-  } finally {
-    // Clean up temporary BoC files
-    if (existsSync(tempBocPath)) {
-      unlinkSync(tempBocPath);
-    }
-    if (existsSync(tempCheckerCellPath)) {
-      unlinkSync(tempCheckerCellPath);
-    }
-  }
+  await analyzer.run(DRAIN_CHECK_SYMBOLIC_FILENAME, (wrapper) => [
+    "custom-checker-compiled",
+    "--checker",
+    wrapper.getTempBocPath(),
+    "--contract",
+    contractPath,
+    "--stop-when-exit-codes-found",
+    "1000",
+    "--checker-data",
+    wrapper.getTempCheckerCellPath(),
+  ]);
 };
 
 export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promise<ReproduceConfig> => {
@@ -148,18 +106,11 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     process.exit(1);
   }
 
-  const checkerPath = getCheckerPath(DRAIN_CHECK_CONCRETE_FILENAME);
-
-  if (!existsSync(checkerPath)) {
-    ui.write(`\n${Sym.ERR} Checker file not found at ${checkerPath}`);
-    process.exit(1);
-  }
-
   const timeout = config.timeout;
 
   const properties: TreeProperty[] = [
     { key: "Contract", value: config.contractAddress.toRawString() },
-    { key: "TSA mode", value: "TON drain reproduction" },
+    { key: "Mode", value: "TON drain reproduction" },
     {
       key: "Options",
       separator: true,
@@ -170,64 +121,31 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     },
   ];
 
-  const output = generateTreeTable("Drain Check Analysis", properties);
-  ui.write("");
-  ui.write(output);
-  ui.write("");
-  ui.setActionPrompt(`${Sym.WAIT} Compiling checker...`);
-
-  // Compile FunC to BoC
-  let bocCode: string;
-  try {
-    bocCode = await compileFuncFile(checkerPath, DRAIN_CHECK_CONCRETE_FILENAME);
-  } catch (error) {
-    ui.clearActionPrompt();
-    ui.write(`\n${Sym.ERR} Compilation failed: ${(error as Error).message}`);
-    process.exit(1);
-  }
-
-  // Write BoC to temporary file
-  const tempBocPath = path.join(tmpdir(), `drain-check-${Date.now()}.boc`);
-  const bocBuffer = Buffer.from(bocCode, "base64");
-  writeFileSync(tempBocPath, bocBuffer);
-
+  const checkerPath = getCheckerPath(DRAIN_CHECK_CONCRETE_FILENAME);
   const checkerCell = beginCell()
     .storeAddress(config.senderAddress)
     .endCell();
-  const checkerCellBoc = checkerCell.toBoc();
-  const tempCheckerCellPath = path.join(tmpdir(), `c4-cell-${Date.now()}.boc`);
-  writeFileSync(tempCheckerCellPath, checkerCellBoc);
 
-  try {
-    ui.clearActionPrompt();
-    ui.setActionPrompt(`${Sym.WAIT} Running analysis...`);
+  const analyzer = new AnalyzerWrapper({
+    ui,
+    checkerPath,
+    checkerCell,
+    properties,
+  });
 
-    const analyzer = await Analyzer.create();
-    await analyzer.run([
-      "custom-checker-compiled",
-      "--checker",
-      tempBocPath,
-      "--contract",
-      config.codePath,
-      "--data",
-      config.dataPath,
-      "--stop-when-exit-codes-found",
-      "1000",
-      "--checker-data",
-      tempCheckerCellPath,
-    ]);
-
-    ui.clearActionPrompt();
-    ui.write(`${Sym.OK} Analysis complete.`);
-  } finally {
-    // Clean up temporary BoC files
-    if (existsSync(tempBocPath)) {
-      unlinkSync(tempBocPath);
-    }
-    if (existsSync(tempCheckerCellPath)) {
-      unlinkSync(tempCheckerCellPath);
-    }
-  }
+  await analyzer.run(DRAIN_CHECK_CONCRETE_FILENAME, (wrapper) => [
+    "custom-checker-compiled",
+    "--checker",
+    wrapper.getTempBocPath(),
+    "--contract",
+    config.codePath,
+    "--data",
+    config.dataPath,
+    "--stop-when-exit-codes-found",
+    "1000",
+    "--checker-data",
+    wrapper.getTempCheckerCellPath(),
+  ]);
 
   return {
     address: config.contractAddress,
