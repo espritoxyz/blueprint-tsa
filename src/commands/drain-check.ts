@@ -2,13 +2,24 @@ import { Argv } from "yargs";
 import { existsSync } from "fs";
 import { beginCell, getMethodId } from "@ton/core";
 import { TreeProperty } from "../common/draw.js";
-import { Sym, DRAIN_CHECK_SYMBOLIC_FILENAME, DRAIN_CHECK_ID, DRAIN_CHECK_CONCRETE_FILENAME } from "../common/constants.js";
-import { buildContracts } from "../common/build-utils.js";
-import { findCompiledContract, getCheckerPath } from "../common/paths.js";
 import { CommandHandler, CommandContext } from "../cli.js";
 import { ReproduceConfig } from "../reproduce/network.js";
 import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
+import {
+  Sym,
+  DRAIN_CHECK_SYMBOLIC_FILENAME,
+  DRAIN_CHECK_ID,
+  DRAIN_CHECK_CONCRETE_FILENAME,
+  ERROR_EXIT_CODE
+} from "../common/constants.js";
+import { buildContracts } from "../common/build-utils.js";
+import {
+  findCompiledContract,
+  getCheckerPath,
+  getSarifReportPath,
+  getReportDirectory
+} from "../common/paths.js";
 
 export const configureDrainCheckCommand = (context: CommandContext): any => {
   return {
@@ -83,7 +94,11 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     checkerPath,
     checkerCell,
     properties,
+    codePath: contractPath,
   });
+
+  const reportDir = getReportDirectory(analyzer.id);
+  const sarifPath = getSarifReportPath(analyzer.id);
 
   await analyzer.run(DRAIN_CHECK_SYMBOLIC_FILENAME, (wrapper) => [
     "custom-checker-compiled",
@@ -92,10 +107,18 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     "--contract",
     contractPath,
     "--stop-when-exit-codes-found",
-    "1000",
+    ERROR_EXIT_CODE.toString(),
     "--checker-data",
     wrapper.getTempCheckerCellPath(),
+    "--output",
+    sarifPath,
+    ...(timeout != null ? ["--timeout", timeout.toString()] : []),
+    "--exported-inputs",
+    reportDir,
   ]);
+
+  const vulnerability = analyzer.reportVulnerability();
+  console.log(vulnerability);
 };
 
 export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promise<ReproduceConfig> => {
@@ -131,6 +154,7 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     checkerPath,
     checkerCell,
     properties,
+    codePath: config.codePath,
   });
 
   await analyzer.run(DRAIN_CHECK_CONCRETE_FILENAME, (wrapper) => [
@@ -142,9 +166,13 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     "--data",
     config.dataPath,
     "--stop-when-exit-codes-found",
-    "1000",
+    ERROR_EXIT_CODE.toString(),
     "--checker-data",
     wrapper.getTempCheckerCellPath(),
+    "--output",
+    getSarifReportPath(wrapper.id),
+    getSarifReportPath(wrapper.id),
+    ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
   ]);
 
   return {

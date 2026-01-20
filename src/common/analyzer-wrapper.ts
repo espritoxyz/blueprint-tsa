@@ -7,6 +7,13 @@ import { Sym } from "./constants.js";
 import { compileFuncFile } from "./build-utils.js";
 import { Analyzer } from "./analyzer.js";
 import { generateTreeTable, TreeProperty } from "./draw.js";
+import { findExploitExecutionIndex, getMessageValue } from "./result-parsing.js";
+import {
+  getSummaryPath,
+  getSarifReportPath,
+  getInputsPath,
+  getContractDataBocPath,
+} from "./paths.js";
 
 /**
  * Configuration for analyzer wrapper
@@ -16,6 +23,13 @@ export interface AnalyzerWrapperConfig {
   checkerPath: string;
   checkerCell: Cell;
   properties?: TreeProperty[];
+  codePath: string;
+}
+
+export interface VulnerabilityDescription {
+  value: bigint;
+  dataPath: string;
+  codePath: string;
 }
 
 /**
@@ -26,9 +40,25 @@ export class AnalyzerWrapper {
   private config: AnalyzerWrapperConfig;
   private tempBocPath: string | null = null;
   private tempCheckerCellPath: string | null = null;
+  id: string;
 
   constructor(config: AnalyzerWrapperConfig) {
     this.config = config;
+    this.id = this.generateId();
+  }
+
+  /**
+   * Generates unique id based on current date and time
+   */
+  private generateId(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const startOfDay = new Date(year, now.getMonth(), now.getDate());
+    const milliseconds = now.getTime() - startOfDay.getTime();
+
+    return `${year}-${month}-${day}-${milliseconds}`;
   }
 
   /**
@@ -138,5 +168,43 @@ export class AnalyzerWrapper {
     } finally {
       this.cleanup();
     }
+  }
+
+  reportVulnerability(): VulnerabilityDescription | null {
+    const summaryPath = getSummaryPath(this.id);
+
+    const sarifPath = getSarifReportPath(this.id);
+    const index = findExploitExecutionIndex(sarifPath);
+    if (index === undefined) {
+      const report = `${Sym.OK} Vulnerability not found.`;
+      writeFileSync(summaryPath, report);
+      this.config.ui.write(report);
+      return null;
+    }
+
+    const reportLines = [
+      `${Sym.WARN} Vulnerability found!`,
+      `Summary Path: ${summaryPath}`,
+      `Input message body and contract data: ${getInputsPath(this.id, index)}`,
+      `SARIF with full information: ${sarifPath}`,
+      "",
+    ];
+
+    this.config.ui.write("");
+    for (const line of reportLines) {
+      this.config.ui.write(line);
+    }
+
+    const report = reportLines.join("\n");
+    writeFileSync(summaryPath, report);
+
+    const dataPath = getContractDataBocPath(this.id, index);
+    const value = getMessageValue(sarifPath, index);
+
+    return {
+      value,
+      dataPath,
+      codePath: this.config.codePath,
+    };
   }
 }

@@ -22,6 +22,24 @@ export const findTSAProjectDirectory = (): string => {
   return tsaDir;
 };
 
+export const findTSAReportsDirectory = (): string => {
+  const tsaDir = findTSAProjectDirectory();
+  const result = path.join(tsaDir, "reports");
+  if (!fs.existsSync(result)) {
+    fs.mkdirSync(result, { recursive: true });
+  }
+  return result;
+};
+
+export const getReportDirectory = (id: string): string => {
+  const reportsDir = findTSAReportsDirectory();
+  const result = path.join(reportsDir, `report-${id}`);
+  if (!fs.existsSync(result)) {
+    fs.mkdirSync(result, { recursive: true });
+  }
+  return result;
+};
+
 export const findCompiledContract = (name: string): string => {
   return path.join(BUILD_DIR, name + ".compiled.json");
 };
@@ -71,3 +89,23 @@ export const findTsaPath = (): string | null => {
 export const getCheckerPath = (checkerName: string): string => {
   return path.join(path.dirname(new URL(import.meta.url).pathname), "../../src/checkers", checkerName);
 };
+
+export const getSarifReportPath = (id: string): string => {
+  const reportDir = getReportDirectory(id);
+  return path.join(reportDir, "report.sarif");
+}
+
+export const getSummaryPath = (id: string): string => {
+  const reportDir = getReportDirectory(id);
+  return path.join(reportDir, "summary.txt");
+}
+
+export const getInputsPath = (id: string, index: number): string => {
+  const reportDir = getReportDirectory(id);
+  return path.join(reportDir, `execution_${index}`);
+}
+
+export const getContractDataBocPath = (id: string, index: number): string => {
+  const inputsPath = getInputsPath(id, index);
+  return path.join(path.join(inputsPath, "c4_1"), "cell.boc");
+}

@@ -26,13 +26,11 @@ export class Analyzer {
       let stderr = "";
 
       proc.stdout?.on("data", (data) => {
-        console.log(data.toString());
         const chunk = data.toString();
         stdout += chunk;
       });
 
       proc.stderr?.on("data", (data) => {
-        console.error(data.toString());
         const chunk = data.toString();
         stderr += chunk;
       });
@@ -42,7 +40,7 @@ export class Analyzer {
           resolve({ stdout, stderr });
         } else {
           console.error("\n" + stderr);
-          reject(new Error(`Process exited with code ${code}`));
+          reject(new Error(`TSA process exited with code ${code}`));
         }
       });
 
