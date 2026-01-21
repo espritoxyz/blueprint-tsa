@@ -36,7 +36,7 @@ export const deploy = async (network: NetworkProvider, config: DeployConfig): Pr
 
     } else if (state.state.type == "uninit") {
       isDeployed = false;
-      ui.write(`Contract at ${address} is uninit. Current balance: ${state.balance}.`);
+      ui.write(`Contract at ${address} is uninit. Current balance: ${Number(state.balance) / 1e9}.`);
       suggestedValue -= state.balance;
 
     } else if (state.state.type == "active") {
@@ -52,7 +52,7 @@ export const deploy = async (network: NetworkProvider, config: DeployConfig): Pr
           process.exit(1);
         } else {
           ui.write(`Contract at ${address} is already deployed and its data matches with the expected one.`);
-          ui.write(`Current balance: ${state.balance}.`);
+          ui.write(`Current balance: ${Number(state.balance) / 1e9}.`);
           const suggestedBalance =  Number(config.suggestedBalance) / 1e9;
           const proceed = await ui.choose(
             `Do you want to send more TONs? (suggested balance: ${suggestedBalance})`,
@@ -118,7 +118,7 @@ export const deploy = async (network: NetworkProvider, config: DeployConfig): Pr
     process.exit(1);
   }
 
-  ui.write(`${Sym.OK} Contract ${address} deployed. Balance: ${state.balance}.`);
+  ui.write(`${Sym.OK} Contract ${address} deployed. Balance: ${Number(state.balance) / 1e9}.`);
 
   return { address, balance: state.balance };
 };

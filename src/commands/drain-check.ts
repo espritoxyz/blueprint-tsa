@@ -89,7 +89,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
 
   const checkerCell = beginCell()
     .storeUint(nonceMethodId, 32)
-    .storeUint(0, 64)
+    .storeUint(Math.floor(Math.random() * 0x10000000000000000), 64)
     .endCell();
 
   const analyzer = new AnalyzerWrapper({
@@ -181,12 +181,18 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     config.codePath,
     "--data",
     config.dataPath,
+    "--balance",
+    config.balance.toString(),
+    "--address",
+    config.contractAddress.toRawString(),
     "--stop-when-exit-codes-found",
     ERROR_EXIT_CODE.toString(),
     "--checker-data",
     wrapper.getTempCheckerCellPath(),
     "--output",
     getSarifReportPath(wrapper.id),
+    "--exported-inputs",
+    getReportDirectory(wrapper.id),
     ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
   ]);
 

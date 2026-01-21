@@ -13,6 +13,7 @@ import {
   getSarifReportPath,
   getInputsPath,
   getContractDataBocPath,
+  getTsaRunLogPath,
 } from "./paths.js";
 
 /**
@@ -162,10 +163,14 @@ export class AnalyzerWrapper {
 
       const analyzerArgs = buildArgs(this);
       const analyzer = await Analyzer.create();
-      await analyzer.run(analyzerArgs);
+      const result = await analyzer.run(analyzerArgs);
+
+      const logPath = getTsaRunLogPath(this.id);
+      writeFileSync(logPath, result.stdout);
 
       this.config.ui.clearActionPrompt();
       this.config.ui.write(`${Sym.OK} Analysis complete.`);
+      this.config.ui.write(`TSA run log available at: ${logPath}`);
     } finally {
       this.cleanup();
     }
