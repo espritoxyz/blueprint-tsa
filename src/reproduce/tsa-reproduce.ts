@@ -50,7 +50,17 @@ export const tsaReproduce: Runner = async (args: Args, ui: UIProvider) => {
         timeout: configJson.timeout ?? null,
       };
 
-      await runConcreteAnalysis(configJson.command, concreteAnalysisConfig);
+      const vulnerability = await runConcreteAnalysis(configJson.command, concreteAnalysisConfig);
+      if (vulnerability == null) {
+        return;
+      }
+
+      ui.write("");
+      ui.write("To clean reports, run:");
+      ui.write("> yarn blueprint tsa clean");
+      ui.write("");
+
+      await reproduce(network, vulnerability);
     }
 
   } catch (error) {

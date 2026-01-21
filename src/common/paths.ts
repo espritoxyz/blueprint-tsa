@@ -115,6 +115,11 @@ export const getContractDataBocPath = (id: string, index: number): string => {
   return path.join(path.join(inputsPath, "c4_1"), "cell.boc");
 };
 
+export const getMsgBodyBocPath = (id: string, index: number): string => {
+  const inputsPath = getInputsPath(id, index);
+  return path.join(path.join(inputsPath, "msgBody_0"), "cell.boc");
+};
+
 export const getTsaRunLogPath = (id: string): string => {
   const reportDir = getReportDirectory(id);
   return path.join(reportDir, "tsa.log");

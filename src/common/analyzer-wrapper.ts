@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync, unlinkSync } from "fs";
+import { existsSync, writeFileSync, unlinkSync, readFileSync } from "fs";
 import path from "path";
 import { tmpdir } from "os";
 import { UIProvider } from "@ton/blueprint";
@@ -14,6 +14,7 @@ import {
   getInputsPath,
   getContractDataBocPath,
   getTsaRunLogPath,
+  getMsgBodyBocPath,
 } from "./paths.js";
 
 /**
@@ -32,6 +33,8 @@ export interface VulnerabilityDescription {
   balance: bigint;
   dataPath: string;
   codePath: string;
+  executionIndex: number;
+  msgBody: Cell;
 }
 
 /**
@@ -176,22 +179,49 @@ export class AnalyzerWrapper {
     }
   }
 
-  reportVulnerability(): VulnerabilityDescription | null {
-    const summaryPath = getSummaryPath(this.id);
-
+  getVulnerability(): VulnerabilityDescription | null {
     const sarifPath = getSarifReportPath(this.id);
     const index = findExploitExecutionIndex(sarifPath);
     if (index === undefined) {
+      return null;
+    }
+
+    const dataPath = getContractDataBocPath(this.id, index);
+    const value = getMessageValue(sarifPath, index);
+    const balance = getInitialBalance(sarifPath, index);
+
+    const msgBodyPath = getMsgBodyBocPath(this.id, index);
+    const msgBodyBuffer = readFileSync(msgBodyPath);
+    const msgBody = Cell.fromBoc(msgBodyBuffer)[0];
+
+    return {
+      value,
+      balance,
+      dataPath,
+      codePath: this.config.codePath,
+      executionIndex: index,
+      msgBody,
+    };
+  }
+
+  reportVulnerability(vulnerability: VulnerabilityDescription | null) {
+    const summaryPath = getSummaryPath(this.id);
+    const sarifPath = getSarifReportPath(this.id);
+
+    if (vulnerability == null) {
       const report = `${Sym.OK} Vulnerability not found.`;
       writeFileSync(summaryPath, report);
+
+      this.config.ui.write("");
       this.config.ui.write(report);
-      return null;
+      this.config.ui.write("");
+      return;
     }
 
     const reportLines = [
       `${Sym.WARN} Vulnerability found!`,
       `Summary path: ${summaryPath}`,
-      `Input message body and contract data: ${getInputsPath(this.id, index)}`,
+      `Input message body and contract data: ${getInputsPath(this.id, vulnerability.executionIndex)}`,
       `SARIF with full information: ${sarifPath}`,
       "",
     ];
@@ -204,16 +234,5 @@ export class AnalyzerWrapper {
     const analysisInfo = generateTreeTable(ANALYSIS_INFO_TITLE, this.config.properties);
     const report = analysisInfo + "\n\n" + reportLines.join("\n");
     writeFileSync(summaryPath, report);
-
-    const dataPath = getContractDataBocPath(this.id, index);
-    const value = getMessageValue(sarifPath, index);
-    const balance = getInitialBalance(sarifPath, index);
-
-    return {
-      value,
-      balance,
-      dataPath,
-      codePath: this.config.codePath,
-    };
   }
 }

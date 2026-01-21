@@ -120,7 +120,8 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     reportDir,
   ]);
 
-  const vulnerability = analyzer.reportVulnerability();
+  const vulnerability = analyzer.getVulnerability();
+  analyzer.reportVulnerability(vulnerability);
 
   ui.write("To clean reports, run:");
   ui.write("> yarn blueprint tsa clean");
@@ -137,7 +138,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   }
 };
 
-export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promise<ReproduceConfig> => {
+export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promise<ReproduceConfig | null> => {
   const { ui } = config;
 
   if (!existsSync(config.codePath)) {
@@ -196,9 +197,15 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
   ]);
 
+  const vulnerability = analyzer.getVulnerability();
+  if (vulnerability == null) {
+    ui.write(`${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`);
+    return null;
+  }
+
   return {
     address: config.contractAddress,
-    msgBody: beginCell().endCell(),
-    suggestedValue: 0n,
+    msgBody: vulnerability.msgBody,
+    suggestedValue: vulnerability.value,
   };
 };
