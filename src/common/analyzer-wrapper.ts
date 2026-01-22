@@ -166,9 +166,9 @@ export class AnalyzerWrapper {
 
       const analyzerArgs = buildArgs(this);
       const analyzer = await Analyzer.create();
-      const result = await analyzer.run(analyzerArgs);
-
       const logPath = getTsaRunLogPath(this.id);
+      const result = await analyzer.run(analyzerArgs, logPath);
+
       writeFileSync(logPath, result.stdout);
 
       this.config.ui.clearActionPrompt();

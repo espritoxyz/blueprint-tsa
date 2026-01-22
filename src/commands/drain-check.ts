@@ -16,6 +16,7 @@ import {
   ERROR_EXIT_CODE
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
+import { printCleanupInstructions } from "../reproduce/utils.js";
 import {
   findCompiledContract,
   getCheckerPath,
@@ -123,9 +124,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   const vulnerability = analyzer.getVulnerability();
   analyzer.reportVulnerability(vulnerability);
 
-  ui.write("To clean reports, run:");
-  ui.write("> yarn blueprint tsa clean");
-  ui.write("");
+  printCleanupInstructions(ui);
 
   if (vulnerability != null) {
     writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id);

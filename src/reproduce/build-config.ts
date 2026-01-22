@@ -1,6 +1,7 @@
 import { writeFileSync } from "fs";
 import { VulnerabilityDescription } from "../common/analyzer-wrapper.js";
 import { getReproduceConfigPath } from "../common/paths.js";
+import { DEPLOY_AND_REPRODUCE_COMMAND } from "../common/constants.js";
 
 export const writeReproduceConfig = (
   vulnerability: VulnerabilityDescription,
@@ -9,7 +10,7 @@ export const writeReproduceConfig = (
   id: string
 ): void => {
   const config = {
-    mode: "deploy-and-reproduce",
+    mode: DEPLOY_AND_REPRODUCE_COMMAND,
     command,
     codePath: vulnerability.codePath,
     dataPath: vulnerability.dataPath,

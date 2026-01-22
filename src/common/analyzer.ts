@@ -1,6 +1,7 @@
 import { ensureJavaInstalled } from "../install/java.js";
 import { ensureTsaInstalled } from "../install/tsa-jar.js";
 import { spawn } from "child_process";
+import { writeFileSync } from "fs";
 
 export class Analyzer {
   javaPath: string;
@@ -17,7 +18,7 @@ export class Analyzer {
     return new Analyzer(javaPath, tsaJarPath);
   }
 
-  run(args: string[]): Promise<{ stdout: string; stderr: string }> {
+  run(args: string[], logPath?: string): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       const allArgs = ["-jar", this.tsaJarPath, ...args];
       const proc = spawn(this.javaPath, allArgs);
@@ -40,6 +41,10 @@ export class Analyzer {
           resolve({ stdout, stderr });
         } else {
           console.error("\n" + stderr);
+          if (logPath) {
+            writeFileSync(logPath, stdout);
+            console.error(`TSA log available at: ${logPath}`);
+          }
           reject(new Error(`TSA process exited with code ${code}`));
         }
       });

@@ -4,6 +4,8 @@ import { Cell } from "@ton/core";
 import { Runner, Args, UIProvider, createNetworkProvider } from "@ton/blueprint";
 import { deploy, DeployConfig, reproduce } from "./network.js";
 import { ConcreteAnalysisConfig, runConcreteAnalysis } from "./concrete-analysis.js";
+import { DEPLOY_AND_REPRODUCE_COMMAND } from "../common/constants.js";
+import { printCleanupInstructions } from "./utils.js";
 
 const argSpec = {
   "--mainnet": Boolean,
@@ -22,7 +24,7 @@ export const tsaReproduce: Runner = async (args: Args, ui: UIProvider) => {
 
     const network = await createNetworkProvider(ui, arg(argSpec));
 
-    if (configJson.mode == "deploy-and-reproduce") {
+    if (configJson.mode == DEPLOY_AND_REPRODUCE_COMMAND) {
       const codeHex = JSON.parse(readFileSync(configJson.codePath, "utf-8")).hex;
       const dataBinary = readFileSync(configJson.dataPath);
       const deploymentMessageHex = configJson.deploymentMessage ?? "b5ee9c72010101010002000000";
@@ -55,10 +57,7 @@ export const tsaReproduce: Runner = async (args: Args, ui: UIProvider) => {
         return;
       }
 
-      ui.write("");
-      ui.write("To clean reports, run:");
-      ui.write("> yarn blueprint tsa clean");
-      ui.write("");
+      printCleanupInstructions(ui);
 
       await reproduce(network, vulnerability);
     }
