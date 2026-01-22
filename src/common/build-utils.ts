@@ -35,7 +35,7 @@ const loadFuncSources = (filePath: string, baseDir: string, loaded: Set<string> 
   }
 
   const content = readFileSync(absolutePath, "utf-8");
-  const relativeKey = path.relative(baseDir, absolutePath);
+  const relativeKey = path.relative(baseDir, absolutePath).split(path.sep).join("/");
   sources[relativeKey] = content;
 
   // Parse #include statements
