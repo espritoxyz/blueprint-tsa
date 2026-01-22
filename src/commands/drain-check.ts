@@ -1,7 +1,7 @@
 import path from "path";
 import { Argv } from "yargs";
 import { existsSync } from "fs";
-import { beginCell, getMethodId } from "@ton/core";
+import { beginCell, getMethodId, toNano } from "@ton/core";
 import { TreeProperty } from "../common/draw.js";
 import { CommandHandler, CommandContext } from "../cli.js";
 import { ReproduceConfig } from "../reproduce/network.js";
@@ -160,9 +160,12 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     },
   ];
 
+  const maxTons = toNano(await ui.input("Enter maximum amount of TONs for reproduction message:"));
+
   const checkerPath = getCheckerPath(DRAIN_CHECK_CONCRETE_FILENAME);
   const checkerCell = beginCell()
     .storeAddress(config.senderAddress)
+    .storeCoins(maxTons)
     .endCell();
 
   const analyzer = new AnalyzerWrapper({

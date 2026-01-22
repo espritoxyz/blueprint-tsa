@@ -20,3 +20,5 @@ export const EXPECTED_MESSAGE_IN_SARIF =
 export const ANALYSIS_INFO_TITLE = "TSA analysis";
 
 export const DEPLOY_AND_REPRODUCE_COMMAND = "deploy-and-reproduce";
+
+export const DEPLOY_WAIT_ATTEMPTS = 30;

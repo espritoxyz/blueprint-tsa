@@ -1,6 +1,6 @@
 import { Cell, toNano, contractAddress, StateInit, Address } from "@ton/core";
 import { NetworkProvider } from "@ton/blueprint";
-import { Sym } from "../common/constants.js";
+import { Sym, DEPLOY_WAIT_ATTEMPTS } from "../common/constants.js";
 
 export interface DeployConfig {
   code: Cell;
@@ -97,9 +97,9 @@ export const deploy = async (network: NetworkProvider, config: DeployConfig): Pr
   });
 
   if (!isDeployed) {
-    await network.waitForDeploy(address, 40);
+    await network.waitForDeploy(address, DEPLOY_WAIT_ATTEMPTS);
   } else {
-    await network.waitForLastTransaction(40);
+    await network.waitForLastTransaction(DEPLOY_WAIT_ATTEMPTS);
   }
 
   const state = await network.getContractState(address);
@@ -131,15 +131,14 @@ export interface ReproduceConfig {
 
 export const reproduce = async (network: NetworkProvider, config: ReproduceConfig) => {
   const ui = network.ui();
-  const suggestedValue = Number(config.suggestedValue) / 1e9;
-  const tonsForReproduce = await ui.input(`Enter amount of TONs for reproduce message (suggested: ${suggestedValue}):`);
+  ui.write(`Number of TONs for reproduction message: ${Number(config.suggestedValue) / 1e9}`);
   await network.sender().send({
     to: config.address,
-    value: toNano(tonsForReproduce),
+    value: config.suggestedValue,
     body: config.msgBody,
   });
 
-  await network.waitForLastTransaction(40);
+  await network.waitForLastTransaction(DEPLOY_WAIT_ATTEMPTS);
 
   ui.write(`${Sym.OK} Reproduction message sent!`);
 };
