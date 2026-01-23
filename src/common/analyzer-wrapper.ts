@@ -15,6 +15,8 @@ import {
   getContractDataBocPath,
   getTsaRunLogPath,
   getMsgBodyBocPath,
+  getContractDataTypesPath,
+  getMsgBodyTypesPath,
 } from "./paths.js";
 
 /**
@@ -222,6 +224,8 @@ export class AnalyzerWrapper {
       `${Sym.WARN} Vulnerability found!`,
       `Summary path: ${summaryPath}`,
       `Input message body and contract data: ${getInputsPath(this.id, vulnerability.executionIndex)}`,
+      `Typed message body: ${getMsgBodyTypesPath(this.id, vulnerability.executionIndex)}`,
+      `Typed contract data: ${getContractDataTypesPath(this.id, vulnerability.executionIndex)}`,
       `SARIF with full information: ${sarifPath}`,
       "",
     ];

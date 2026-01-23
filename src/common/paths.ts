@@ -117,9 +117,19 @@ export const getContractDataBocPath = (id: string, index: number): string => {
   return path.join(path.join(inputsPath, "c4_1"), "cell.boc");
 };
 
+export const getContractDataTypesPath = (id: string, index: number): string => {
+  const inputsPath = getInputsPath(id, index);
+  return path.join(path.join(inputsPath, "c4_1"), "cell-types.yaml");
+};
+
 export const getMsgBodyBocPath = (id: string, index: number): string => {
   const inputsPath = getInputsPath(id, index);
   return path.join(path.join(inputsPath, "msgBody_0"), "cell.boc");
+};
+
+export const getMsgBodyTypesPath = (id: string, index: number): string => {
+  const inputsPath = getInputsPath(id, index);
+  return path.join(path.join(inputsPath, "msgBody_0"), "cell-types.yaml");
 };
 
 export const getTsaRunLogPath = (id: string): string => {
