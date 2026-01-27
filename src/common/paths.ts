@@ -66,7 +66,10 @@ export const findJavaBinPath = (): string | null => {
   }
 
   const javaHomePath = path.join(jre, contents[0]);
-  const binPath = path.join(javaHomePath, "bin");
+  let binPath = path.join(javaHomePath, "bin");
+  if (process.platform == "darwin") {
+    binPath = `${javaHomePath}/Contents/Home/bin`;
+  }
   const javaBinPath = path.join(binPath, mapOSToJavaBinary());
 
   if (!fs.existsSync(javaBinPath)) {
