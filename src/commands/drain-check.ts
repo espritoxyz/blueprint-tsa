@@ -45,6 +45,11 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
           type: "string",
           description: "Contract name or path",
           demandOption: true,
+        })
+        .option("verbose", {
+          alias: "v",
+          type: "boolean",
+          description: "Use debug output in TSA log",
         }),
     handler: async (argv: any) => {
       await drainCheckCommand(context, argv);
@@ -119,6 +124,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     ...(timeout != null ? ["--timeout", timeout.toString()] : []),
     "--exported-inputs",
     reportDir,
+    ...(parsedArgs.verbose ? ["-v"] : []),
   ]);
 
   const vulnerability = analyzer.getVulnerability();
