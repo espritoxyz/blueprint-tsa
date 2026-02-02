@@ -2,7 +2,7 @@ import arg from "arg";
 import { readFileSync } from "fs";
 import { Cell } from "@ton/core";
 import { Runner, Args, UIProvider, createNetworkProvider } from "@ton/blueprint";
-import { deploy, DeployConfig, reproduce } from "./network.js";
+import {DeployConfig, deployViaChameleon, reproduce} from "./network.js";
 import { ConcreteAnalysisConfig, runConcreteAnalysis } from "./concrete-analysis.js";
 import { DEPLOY_AND_REPRODUCE_COMMAND } from "../common/constants.js";
 import { printCleanupInstructions } from "./utils.js";
@@ -36,7 +36,7 @@ export const tsaReproduce: Runner = async (args: Args, ui: UIProvider) => {
         deploymentMessage: Cell.fromBoc(Buffer.from(deploymentMessageHex, "hex"))[0],
       };
 
-      const deployResult = await deploy(network, config);
+      const deployResult = await deployViaChameleon(network, config);
       const senderAddress = network.sender().address;
       if (!senderAddress) {
         throw new Error("Sender address is not available");

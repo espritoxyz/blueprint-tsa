@@ -4,7 +4,7 @@ import { tmpdir } from "os";
 import { UIProvider } from "@ton/blueprint";
 import { Cell } from "@ton/core";
 import { Sym, ANALYSIS_INFO_TITLE } from "./constants.js";
-import { compileFuncFile } from "./build-utils.js";
+import { compileFuncFileToBase64Boc } from "./build-utils.js";
 import { Analyzer } from "./analyzer.js";
 import { generateTreeTable, TreeProperty } from "./draw.js";
 import { findExploitExecutionIndex, getMessageValue, getInitialBalance } from "./result-parsing.js";
@@ -99,7 +99,7 @@ export class AnalyzerWrapper {
     this.config.ui.setActionPrompt(`${Sym.WAIT} Compiling checker...`);
 
     try {
-      const bocCode = await compileFuncFile(this.config.checkerPath, checkerFilename);
+      const bocCode = await compileFuncFileToBase64Boc(this.config.checkerPath, checkerFilename);
       const bocBuffer = Buffer.from(bocCode, "base64");
       this.tempBocPath = path.join(tmpdir(), `checker-${Date.now()}.boc`);
       writeFileSync(this.tempBocPath, bocBuffer);

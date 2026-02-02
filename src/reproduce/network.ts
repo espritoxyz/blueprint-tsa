@@ -1,6 +1,8 @@
-import { Cell, toNano, contractAddress, StateInit, Address } from "@ton/core";
-import { NetworkProvider } from "@ton/blueprint";
-import { Sym, DEPLOY_WAIT_ATTEMPTS } from "../common/constants.js";
+import {Address, beginCell, Cell, contractAddress, StateInit, toNano} from "@ton/core";
+import {NetworkProvider, UIProvider} from "@ton/blueprint";
+import {DEPLOY_WAIT_ATTEMPTS, Sym} from "../common/constants.js";
+import {compileFuncFileToBase64Boc} from "../common/build-utils.js";
+import {getCheckerPath} from "../common/paths.js";
 
 export interface DeployConfig {
   code: Cell;
@@ -15,113 +17,70 @@ export interface DeployResult {
   balance: bigint;
 }
 
-export const deploy = async (network: NetworkProvider, config: DeployConfig): Promise<DeployResult> => {
-  const ui = network.ui();
 
-  const stateInit: StateInit = {
-    code: config.code,
-    data: config.data,
-  };
+async function ensureDeployed(network: NetworkProvider, chameleonAddress: Address, config: DeployConfig, ui: UIProvider, chameleonStatInit: StateInit) {
+  const isDeployed = await network.isContractDeployed(chameleonAddress);
 
-  const address = contractAddress(0, stateInit);
+  // ensure chameleon deployed
+  if (!isDeployed) {
+    let suggestedValue = config.suggestedBalance;
+    if (suggestedValue < 0n) {
+      suggestedValue = 0n;
+    }
+    const suggestedValueInTons = Number(suggestedValue) / 1e9;
 
-  let isDeployed = await network.isContractDeployed(address);
-  let suggestedValue = config.suggestedBalance;
+    const tonsForDeployInput =
+      await ui.input(`Enter amount of TONs for deployment message (suggested: ${suggestedValueInTons} + fees):`);
 
-  if (isDeployed) {
-    const state = await network.getContractState(address);
-    if (state.state.type == "frozen") {
-      ui.write(`${Sym} contract at ${address} is frozen.`);
-      process.exit(1);
-
-    } else if (state.state.type == "uninit") {
-      isDeployed = false;
-      ui.write(`Contract at ${address} is uninit. Current balance: ${Number(state.balance) / 1e9}.`);
-      suggestedValue -= state.balance;
-
-    } else if (state.state.type == "active") {
-      const actualData = state.state.data;
-
-      if (actualData) {
-        const actualDataCell = Cell.fromBoc(actualData)[0];
-
-        const isDataMatching = actualDataCell.equals(config.data);
-
-        if (!isDataMatching) {
-          ui.write(`${Sym.ERR} Contract at ${address} is already deployed and its data does not match expected data.`);
-          process.exit(1);
-        } else {
-          ui.write(`Contract at ${address} is already deployed and its data matches with the expected one.`);
-          ui.write(`Current balance: ${Number(state.balance) / 1e9}.`);
-          const suggestedBalance =  Number(config.suggestedBalance) / 1e9;
-          const proceed = await ui.choose(
-            `Do you want to send more TONs? (suggested balance: ${suggestedBalance})`,
-            [
-              {
-                "name": "Yes",
-                "value": true,
-              },
-              {
-                "name": "No",
-                "value": false,
-              },
-            ],
-            (c) => c.name,
-          );
-          if (!proceed.value) {
-            return { address, balance: state.balance };
-          }
-          suggestedValue -= state.balance;
-        }
-      } else {
-        ui.write(`${Sym.ERR} Contract at ${address} is already deployed. Cannot extract contract data to compare.`);
-        process.exit(1);
-      }
-    } else {
-      throw new Error(`Unexpected contract state: ${state.state}`);
+    const tonsForDeploy = toNano(tonsForDeployInput);
+    await network.sender().send({
+      to: chameleonAddress,
+      value: tonsForDeploy,
+      init: chameleonStatInit,
+    });
+    await network.waitForDeploy(chameleonAddress, DEPLOY_WAIT_ATTEMPTS);
+    const chameleonState = await network.getContractState(chameleonAddress);
+    if (chameleonState.state.type !== "active") {
+      throw new Error(`Failed to deploy ${chameleonAddress}`);
     }
   }
+}
 
-  if (suggestedValue < 0n) {
-    suggestedValue = 0n;
-  }
-  const suggestedValueInTons = Number(suggestedValue) / 1e9;
-
-  const tonsForDeploy =
-    await ui.input(`Enter amount of TONs for deployment message (suggested: ${suggestedValueInTons} + fees):`);
-
+export const deployViaChameleon = async (network: NetworkProvider, config: DeployConfig): Promise<DeployResult> => {
+  const ui = network.ui();
+  ui.write("deploying via chameleon V3");
+  const chameleonContractFilename = "chameleon-contract.fc";
+  const path = getCheckerPath(chameleonContractFilename);
+  const chameleonContract = Cell.fromBase64(await compileFuncFileToBase64Boc(path, chameleonContractFilename));
+  const nonce = Math.floor(Math.random() * (1 << 31));
+  console.log("Nonce = ", nonce);
+  const chameleonStateInit: StateInit = {
+    code: chameleonContract,
+    data: beginCell().storeInt(nonce, 32).endCell(),
+  };
+  const chameleonAddress = contractAddress(0, chameleonStateInit);
+  await ensureDeployed(network, chameleonAddress, config, ui, chameleonStateInit);
+  const tonsForSendingMessageInput =
+    await ui.input(`Enter amount of TONs for deployment message (suggested: ${config.suggestedValue} + fees):`);
+  const tonsForSendingMessage = toNano(tonsForSendingMessageInput);
+  // filling the insides of the chameleon
+  const messageToChameleon = beginCell().storeRef(config.data).storeRef(config.code).endCell();
   await network.sender().send({
-    to: address,
-    init: stateInit,
-    value: toNano(tonsForDeploy),
+    to: chameleonAddress,
+    value: tonsForSendingMessage,
+    body: messageToChameleon,
   });
 
-  if (!isDeployed) {
-    await network.waitForDeploy(address, DEPLOY_WAIT_ATTEMPTS);
-  } else {
-    await network.waitForLastTransaction(DEPLOY_WAIT_ATTEMPTS);
+  const chameleonState = await network.getContractState(chameleonAddress);
+  if (chameleonState.state.type !== "active") {
+    throw new Error(`Failed to deploy ${chameleonAddress}`);
   }
-
-  const state = await network.getContractState(address);
-  if (state.state.type != "active") {
-    throw new Error("Unexpected contract state");
-  }
-
-  let dataMatches = false;
-  if (state.state.data) {
-    const actualData = Cell.fromBoc(state.state.data)[0];
-    dataMatches = actualData.equals(config.data);
-  }
-
-  if (!dataMatches) {
-    ui.write(`${Sym.ERR} Contract data changed after receiving deployment message.`);
-    process.exit(1);
-  }
-
-  ui.write(`${Sym.OK} Contract ${address} deployed. Balance: ${Number(state.balance) / 1e9}.`);
-
-  return { address, balance: state.balance };
+  return {
+    address: chameleonAddress,
+    balance: chameleonState.balance,
+  };
 };
+
 
 export interface ReproduceConfig {
   address: Address;

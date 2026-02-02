@@ -1,0 +1,8 @@
+#include "imports/stdlib.fc";
+
+() recv_internal(int msg_value, cell in_msg_full, slice in_msg) impure {
+    var data = in_msg~load_ref();
+    var code = in_msg~load_ref();
+    set_data(data);
+    set_code(code);
+}
