@@ -1,4 +1,4 @@
-import {Address, beginCell, Cell, contractAddress, StateInit, toNano} from "@ton/core";
+import {Address, beginCell, Builder, Cell, contractAddress, StateInit, toNano} from "@ton/core";
 import {NetworkProvider, UIProvider} from "@ton/blueprint";
 import {DEPLOY_WAIT_ATTEMPTS, Sym} from "../common/constants.js";
 import {compileFuncFileToBase64Boc} from "../common/build-utils.js";
@@ -46,17 +46,16 @@ async function ensureDeployed(network: NetworkProvider, chameleonAddress: Addres
   }
 }
 
-export const deployViaChameleon = async (network: NetworkProvider, config: DeployConfig): Promise<DeployResult> => {
+export const deployViaChameleon = async (network: NetworkProvider, config: DeployConfig, nonces: bigint[]): Promise<DeployResult> => {
   const ui = network.ui();
-  ui.write("deploying via chameleon V3");
   const chameleonContractFilename = "chameleon-contract.fc";
   const path = getCheckerPath(chameleonContractFilename);
   const chameleonContract = Cell.fromBase64(await compileFuncFileToBase64Boc(path, chameleonContractFilename));
-  const nonce = Math.floor(Math.random() * (1 << 31));
-  console.log("Nonce = ", nonce);
   const chameleonStateInit: StateInit = {
     code: chameleonContract,
-    data: beginCell().storeInt(nonce, 32).endCell(),
+    data: nonces
+      .reduce((prevCell: Builder, nextNoncePart: bigint) => prevCell.storeInt(nextNoncePart, 32), beginCell())
+      .endCell(),
   };
   const chameleonAddress = contractAddress(0, chameleonStateInit);
   await ensureDeployed(network, chameleonAddress, config, ui, chameleonStateInit);

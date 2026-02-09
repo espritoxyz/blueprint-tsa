@@ -1,5 +1,6 @@
 import yargs from "yargs";
-import { Args, UIProvider } from "@ton/blueprint";
+import {Args, UIProvider} from "@ton/blueprint";
+import {configureReproduceCommand} from "./commands/reproduce.js";
 import { configureDrainCheckCommand } from "./commands/drain-check.js";
 import { configureReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
 import { configureCleanCommand } from "./commands/clean.js";
@@ -17,13 +18,14 @@ export interface CommandHandler {
  * Main CLI router - parses subcommands and delegates to handlers
  */
 export const createCLI = (context: CommandContext) => {
-  const { args, ui } = context;
+  const {args, ui} = context;
 
   const argv = args._.slice(1);
 
   const drainCheckConfig = configureDrainCheckCommand(context);
   const replayAttackCheckConfig = configureReplayAttackCheckCommand(context);
   const cleanConfig = configureCleanCommand();
+  const reproduceCommand = configureReproduceCommand(context);
 
   return yargs(argv)
     .scriptName("tsa")
@@ -44,6 +46,12 @@ export const createCLI = (context: CommandContext) => {
       cleanConfig.description,
       cleanConfig.builder,
       cleanConfig.handler
+    )
+    .command(
+      reproduceCommand.command,
+      reproduceCommand.description,
+      reproduceCommand.builder,
+      reproduceCommand.handler
     )
     .demandCommand(1, "Please specify a subcommand")
     .help()

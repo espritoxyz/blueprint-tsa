@@ -12,6 +12,7 @@ export const TSA_URL = `https://github.com/tochilinak/tsa/releases/download/${TS
 export const DRAIN_CHECK_SYMBOLIC_FILENAME = "drain-check-symbolic.fc";
 export const DRAIN_CHECK_CONCRETE_FILENAME = "drain-check-concrete.fc";
 export const DRAIN_CHECK_ID = "drain-check";
+export const REPRODUCE_ID = "reproduce";
 
 export const REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME = "replay-attack-symbolic.fc";
 export const REPLAY_ATTACK_CHECK_ID = "replay-attack-check";
