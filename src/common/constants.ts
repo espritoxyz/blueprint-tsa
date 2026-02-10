@@ -5,13 +5,16 @@ export class Sym {
   public static WAIT = "⏳";
 }
 
-export const TSA_VERSION = "debug-15";
+export const TSA_VERSION = "debug-18";
 export const TSA_NAME = `tsa-cli-${TSA_VERSION}.jar`;
 export const TSA_URL = `https://github.com/tochilinak/tsa/releases/download/${TSA_VERSION}/tsa-cli.jar`;
 
 export const DRAIN_CHECK_SYMBOLIC_FILENAME = "drain-check-symbolic.fc";
 export const DRAIN_CHECK_CONCRETE_FILENAME = "drain-check-concrete.fc";
 export const DRAIN_CHECK_ID = "drain-check";
+
+export const REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME = "replay-attack-symbolic.fc";
+export const REPLAY_ATTACK_CHECK_ID = "replay-attack-check";
 
 export const ERROR_EXIT_CODE = 1000;
 export const EXPECTED_MESSAGE_IN_SARIF =

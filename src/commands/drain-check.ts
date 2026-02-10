@@ -43,7 +43,7 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
         .option("contract", {
           alias: "c",
           type: "string",
-          description: "Contract name or path",
+          description: "Contract name",
           demandOption: true,
         })
         .option("verbose", {
@@ -209,6 +209,10 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
   if (vulnerability == null) {
     ui.write(`${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`);
     return null;
+  }
+
+  if (vulnerability.value == null) {
+    throw new Error("Unexpected external message");
   }
 
   return {

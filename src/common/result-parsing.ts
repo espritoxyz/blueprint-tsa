@@ -14,12 +14,16 @@ export const findExploitExecutionIndex = (sarifPath: string): number | undefined
   return index >= 0 ? index : undefined;
 };
 
-export const getMessageValue = (sarifPath: string, index: number): bigint => {
+export const getMessageValue = (sarifPath: string, index: number): bigint | null => {
   const sarifContent = readFileSync(sarifPath, "utf-8");
   const parsedObject = JSON.parse(sarifContent);
   const results = parsedObject.runs[0].results || [];
   const result = results[index];
-  return BigInt(result.properties.additionalInputs["0"].msgValue);
+  const input = result.properties.additionalInputs["0"];
+  if (input.type == "recvExternalInput") {
+    return null;
+  }
+  return BigInt(input.msgValue);
 };
 
 export const getInitialBalance = (sarifPath: string, index: number): bigint => {
