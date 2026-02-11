@@ -1,6 +1,7 @@
 import yargs from "yargs";
 import { Args, UIProvider } from "@ton/blueprint";
 import { configureDrainCheckCommand } from "./commands/drain-check.js";
+import { configureReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
 import { configureCleanCommand } from "./commands/clean.js";
 
 export interface CommandContext {
@@ -21,6 +22,7 @@ export const createCLI = (context: CommandContext) => {
   const argv = args._.slice(1);
 
   const drainCheckConfig = configureDrainCheckCommand(context);
+  const replayAttackCheckConfig = configureReplayAttackCheckCommand(context);
   const cleanConfig = configureCleanCommand();
 
   return yargs(argv)
@@ -30,6 +32,12 @@ export const createCLI = (context: CommandContext) => {
       drainCheckConfig.description,
       drainCheckConfig.builder,
       drainCheckConfig.handler
+    )
+    .command(
+      replayAttackCheckConfig.command,
+      replayAttackCheckConfig.description,
+      replayAttackCheckConfig.builder,
+      replayAttackCheckConfig.handler
     )
     .command(
       cleanConfig.command,

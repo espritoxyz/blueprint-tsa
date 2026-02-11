@@ -31,7 +31,7 @@ export interface AnalyzerWrapperConfig {
 }
 
 export interface VulnerabilityDescription {
-  value: bigint;
+  value: bigint | null;
   balance: bigint;
   dataPath: string;
   codePath: string;

@@ -34,7 +34,7 @@ export const findTSAReportsDirectory = (): string => {
 
 export const getReportDirectory = (id: string): string => {
   const reportsDir = findTSAReportsDirectory();
-  const result = path.join(reportsDir, `report-${id}`);
+  const result = path.join(reportsDir, `run-${id}`);
   if (!fs.existsSync(result)) {
     fs.mkdirSync(result, { recursive: true });
   }

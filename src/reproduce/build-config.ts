@@ -9,6 +9,10 @@ export const writeReproduceConfig = (
   timeout: number | null,
   id: string
 ): void => {
+  if (vulnerability.value == null) {
+    throw new Error("Unexpected external message");
+  }
+
   const config = {
     mode: DEPLOY_AND_REPRODUCE_COMMAND,
     command,
