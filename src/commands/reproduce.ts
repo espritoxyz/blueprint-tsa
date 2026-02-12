@@ -7,6 +7,7 @@ import {DEPLOY_AND_REPRODUCE_COMMAND, REPRODUCE_ID, Sym} from "../common/constan
 import {printCleanupInstructions} from "../reproduce/utils.js";
 import {CommandContext} from "../cli.js";
 import {Argv} from "yargs";
+import {TsaVulnerabilityConfigSchema} from "../reproduce/reproduce-config.js";
 
 export const configureReproduceCommand = (context: CommandContext): any => ({
   command: REPRODUCE_ID,
@@ -49,19 +50,23 @@ export const executeReproduceCommand = async (context: CommandContext, parsedArg
   if (!reproduceConfigPath) {
     throw new Error("Please specify the reproduction config file");
   }
-  const configJson = JSON.parse(readFileSync(reproduceConfigPath, "utf-8")); // TODO handle the reading from JSON properly with avoiding crashes
+  const configJsonResult =
+    TsaVulnerabilityConfigSchema.safeParse(JSON.parse(readFileSync(reproduceConfigPath, "utf-8")));
+  if (!configJsonResult.success) {
+    ui.write("Failed to parse reproduce config file");
+    process.exit(1);
+  }
+  const configJson = configJsonResult.data;
   const network = await createNetworkProvider(ui, {_: []});
 
   if (configJson.mode === DEPLOY_AND_REPRODUCE_COMMAND) {
     const codeHex = JSON.parse(readFileSync(configJson.codePath, "utf-8")).hex;
     const dataBinary = readFileSync(configJson.dataPath);
-    const deploymentMessageHex = configJson.deploymentMessage ?? "b5ee9c72010101010002000000";
     const config: DeployConfig = {
       code: Cell.fromBoc(Buffer.from(codeHex, "hex"))[0],
       data: Cell.fromBoc(dataBinary)[0],
       suggestedBalance: BigInt(configJson.suggestedBalance),
       suggestedValue: BigInt(configJson.suggestedValue),
-      deploymentMessage: Cell.fromBoc(Buffer.from(deploymentMessageHex, "hex"))[0]
     };
     const emptyAddress = Address.parseRaw("0:0000000000000000000000000000000000000000000000000000000000000000");
     const useExistingContract = await ui.prompt("Do you want to reuse an already deployed contract?");

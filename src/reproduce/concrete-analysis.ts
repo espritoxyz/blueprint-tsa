@@ -11,12 +11,12 @@ export interface ConcreteAnalysisConfig {
   contractAddress: Address;
   senderAddress: Address;
   ui: UIProvider;
-  timeout?: number;
-};
+  timeout: number | null;
+}
 
 export const runConcreteAnalysis = async (mode: string, config: ConcreteAnalysisConfig): Promise<ReproduceConfig | null> => {
   const ui = config.ui;
-  if (mode == DRAIN_CHECK_ID) {
+  if (mode === DRAIN_CHECK_ID) {
     return await drainCheckConcrete(config);
   } else {
     ui.write(`${Sym.ERR} Invalid command: ${mode}`);
