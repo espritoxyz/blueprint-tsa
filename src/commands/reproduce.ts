@@ -17,9 +17,9 @@ export const configureReproduceCommand = (context: CommandContext): any => ({
         alias: "c",
         type: "string",
         description: "Path to the reproduction config",
-        demandOption: true,
+        demandOption: true
       }),
-  handler: async (argv: any) => await executeReproduceCommand(context, argv),
+  handler: async (argv: any) => await executeReproduceCommand(context, argv)
 });
 
 async function checkAddressContainsExpectedData(network: NetworkProvider, queriedAddress: Address, config: DeployConfig, ui: UIProvider) {
@@ -32,12 +32,15 @@ async function checkAddressContainsExpectedData(network: NetworkProvider, querie
     const actualData = Cell.fromBoc(contractState.state.data)[0];
     dataMatches = actualData.equals(config.data);
   }
-  if (!dataMatches) {
+  if (dataMatches) {
+    ui.write(`${Sym.OK} The data stored at contract matches the expected data.`);
+  } else {
     ui.write(`${Sym.ERR} Contract data on the contract does not match data on the config`);
     process.exit(1);
   }
   return contractState;
 }
+
 
 export const executeReproduceCommand = async (context: CommandContext, parsedArgs: any) => {
   const {ui} = context;
@@ -57,17 +60,21 @@ export const executeReproduceCommand = async (context: CommandContext, parsedArg
       data: Cell.fromBoc(dataBinary)[0],
       suggestedBalance: BigInt(configJson.suggestedBalance),
       suggestedValue: BigInt(configJson.suggestedValue),
-      deploymentMessage: Cell.fromBoc(Buffer.from(deploymentMessageHex, "hex"))[0],
+      deploymentMessage: Cell.fromBoc(Buffer.from(deploymentMessageHex, "hex"))[0]
     };
     const emptyAddress = Address.parseRaw("0:0000000000000000000000000000000000000000000000000000000000000000");
-    const inputAddress = await ui.inputAddress("Input the address to deploy contract to (or press Enter to deploy new contract", emptyAddress);
+    const useExistingContract = await ui.prompt("Do you want to reuse an already deployed contract?");
+
+    const getUserInputAddress = async () => {
+      return await ui.inputAddress("Input the address to deploy contract to (or press Enter to deploy new contract", emptyAddress);
+    };
     const deployChameleon = async () => {
       const nonces = Array.from(Array(8), () => BigInt(Math.floor(Math.random() * (1 << 29))));
       const deployResult = await deployViaChameleon(network, config, nonces);
       return deployResult.address;
     };
-    const address = inputAddress !== emptyAddress
-      ? inputAddress
+    const address = useExistingContract
+      ? await getUserInputAddress()
       : await deployChameleon();
     const contractState = await checkAddressContainsExpectedData(network, address, config, ui);
 
@@ -84,7 +91,7 @@ export const executeReproduceCommand = async (context: CommandContext, parsedArg
       contractAddress: address,
       senderAddress,
       ui,
-      timeout: configJson.timeout ?? null,
+      timeout: configJson.timeout ?? null
     };
 
     const vulnerability = await runConcreteAnalysis(configJson.command, concreteAnalysisConfig);

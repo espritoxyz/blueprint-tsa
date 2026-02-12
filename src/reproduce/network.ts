@@ -1,5 +1,5 @@
 import {Address, beginCell, Builder, Cell, contractAddress, StateInit, toNano} from "@ton/core";
-import {NetworkProvider, UIProvider} from "@ton/blueprint";
+import {NetworkProvider} from "@ton/blueprint";
 import {DEPLOY_WAIT_ATTEMPTS, Sym} from "../common/constants.js";
 import {compileFuncFileToBase64Boc} from "../common/build-utils.js";
 import {getCheckerPath} from "../common/paths.js";
@@ -18,25 +18,24 @@ export interface DeployResult {
 }
 
 
-async function ensureDeployed(network: NetworkProvider, chameleonAddress: Address, config: DeployConfig, ui: UIProvider, chameleonStatInit: StateInit) {
+async function ensureDeployed(
+  network: NetworkProvider,
+  chameleonAddress: Address,
+  chameleonStateInit: StateInit,
+  tonsForSendingMessage: bigint,
+  messageToChameleon: Cell,
+) {
+  const ui = network.ui();
   const isDeployed = await network.isContractDeployed(chameleonAddress);
 
   // ensure chameleon deployed
   if (!isDeployed) {
-    let suggestedValue = config.suggestedBalance;
-    if (suggestedValue < 0n) {
-      suggestedValue = 0n;
-    }
-    const suggestedValueInTons = Number(suggestedValue) / 1e9;
-
-    const tonsForDeployInput =
-      await ui.input(`Enter amount of TONs for deployment message (suggested: ${suggestedValueInTons} + fees):`);
-
-    const tonsForDeploy = toNano(tonsForDeployInput);
+    ui.write(`${Sym.WAIT} Sending a message to deploy the contract under test`);
     await network.sender().send({
       to: chameleonAddress,
-      value: tonsForDeploy,
-      init: chameleonStatInit,
+      value: tonsForSendingMessage,
+      init: chameleonStateInit,
+      body: messageToChameleon,
     });
     await network.waitForDeploy(chameleonAddress, DEPLOY_WAIT_ATTEMPTS);
     const chameleonState = await network.getContractState(chameleonAddress);
@@ -58,18 +57,12 @@ export const deployViaChameleon = async (network: NetworkProvider, config: Deplo
       .endCell(),
   };
   const chameleonAddress = contractAddress(0, chameleonStateInit);
-  await ensureDeployed(network, chameleonAddress, config, ui, chameleonStateInit);
   const tonsForSendingMessageInput =
-    await ui.input(`Enter amount of TONs for deployment message (suggested: ${config.suggestedValue} + fees):`);
-  const tonsForSendingMessage = toNano(tonsForSendingMessageInput);
-  // filling the insides of the chameleon
-  const messageToChameleon = beginCell().storeRef(config.data).storeRef(config.code).endCell();
-  await network.sender().send({
-    to: chameleonAddress,
-    value: tonsForSendingMessage,
-    body: messageToChameleon,
-  });
+    await ui.input(`Enter amount of TONs for deployment message (suggested: ${config.suggestedValue + config.suggestedBalance} + fees):`);
 
+  const tonsForSendingMessage = toNano(tonsForSendingMessageInput);
+  const messageToChameleon = beginCell().storeRef(config.data).storeRef(config.code).endCell();
+  await ensureDeployed(network, chameleonAddress, chameleonStateInit, tonsForSendingMessage, messageToChameleon);
   const chameleonState = await network.getContractState(chameleonAddress);
   if (chameleonState.state.type !== "active") {
     throw new Error(`Failed to deploy ${chameleonAddress}`);
@@ -90,6 +83,7 @@ export interface ReproduceConfig {
 export const reproduce = async (network: NetworkProvider, config: ReproduceConfig) => {
   const ui = network.ui();
   ui.write(`Number of TONs for reproduction message: ${Number(config.suggestedValue) / 1e9}`);
+  ui.write(`${Sym.WAIT} Sending a reproduction message`);
   await network.sender().send({
     to: config.address,
     value: config.suggestedValue,
