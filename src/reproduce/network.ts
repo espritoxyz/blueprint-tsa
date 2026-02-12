@@ -9,7 +9,6 @@ export interface DeployConfig {
   data: Cell;
   suggestedBalance: bigint;
   suggestedValue: bigint;
-  deploymentMessage: Cell;
 }
 
 export interface DeployResult {
