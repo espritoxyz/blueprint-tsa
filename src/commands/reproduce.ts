@@ -1,4 +1,3 @@
-import arg from "arg";
 import {readFileSync} from "fs";
 import {Address, Cell} from "@ton/core";
 import {createNetworkProvider, NetworkProvider, UIProvider} from "@ton/blueprint";
@@ -22,17 +21,6 @@ export const configureReproduceCommand = (context: CommandContext): any => ({
       }),
   handler: async (argv: any) => await executeReproduceCommand(context, argv),
 });
-
-const argSpec = {
-  "--mainnet": Boolean,
-  "--testnet": Boolean,
-
-  "--tonscan": Boolean,
-  "--tonviewer": Boolean,
-  "--toncx": Boolean,
-  "--dton": Boolean,
-};
-
 
 async function checkAddressContainsExpectedData(network: NetworkProvider, queriedAddress: Address, config: DeployConfig, ui: UIProvider) {
   const contractState = await network.getContractState(queriedAddress);
@@ -58,7 +46,7 @@ export const executeReproduceCommand = async (context: CommandContext, parsedArg
     throw new Error("Please specify the reproduction config file");
   }
   const configJson = JSON.parse(readFileSync(reproduceConfigPath, "utf-8")); // TODO handle the reading from JSON properly with avoiding crashes
-  const network = await createNetworkProvider(ui, arg(argSpec, {argv: []}));
+  const network = await createNetworkProvider(ui, {_: []});
 
   if (configJson.mode === DEPLOY_AND_REPRODUCE_COMMAND) {
     const codeHex = JSON.parse(readFileSync(configJson.codePath, "utf-8")).hex;
