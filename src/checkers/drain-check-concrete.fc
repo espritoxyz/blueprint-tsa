@@ -1,6 +1,8 @@
 #include "imports/stdlib.fc";
 #include "imports/tsa_functions.fc";
 
+(int) slice_data_equal?(slice s1, slice s2) asm "SDEQ";
+
 global slice initial_sender;
 global int initial_value;
 global int received_value;
@@ -46,5 +48,7 @@ global int max_value;
 
     tsa_allow_failures();
 
-    throw_if(1000, received_value > initial_value);
+    var contract_owner = tsa_call_1_0(1, 25);
+
+    throw_if(1000, slice_data_equal?(contract_owner, initial_sender));
 }

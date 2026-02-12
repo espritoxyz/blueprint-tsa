@@ -96,7 +96,8 @@ export const executeReproduceCommand = async (context: CommandContext, parsedArg
       contractAddress: address,
       senderAddress,
       ui,
-      timeout: configJson.timeout ?? null
+      timeout: configJson.timeout,
+      concreteCheckerOptions: configJson.concreteCheckerOptions,
     };
 
     const vulnerability = await runConcreteAnalysis(configJson.command, concreteAnalysisConfig);

@@ -10,6 +10,7 @@ export const tsa: Runner = async (args: Args, ui: UIProvider) => {
     if (error instanceof Error) {
       ui.clearActionPrompt();
       ui.write(`${Sym.ERR} Error: ${error.message}`);
+      ui.write(error.stack ?? "no stack");
       process.exit(1);
     } else {
       throw error;
