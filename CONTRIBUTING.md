@@ -4,6 +4,10 @@
     ```
     yarn build
     ```
+2. Link it:
+   ```
+   yarn link
+   ```
 
 2. Create a new Blueprint project:
     ```
@@ -11,20 +15,22 @@
     cd <project name>
     ```
 
-3. Add this plugin from the project's directory:
+3. Add this plugin from the project's directory via [link](https://classic.yarnpkg.com/lang/en/docs/cli/link/):
     ```
-    yarn add file:/path/to/blueprint-tsa
+    yarn link blueprint-tsa
     ```
 
 4. Add the Blueprint configuration to the project:
-    ```bash
-    echo "import { TsaPlugin } from 'blueprint-tsa';
+    ```typescript
+    // blueprint.config.ts in <project dir>:
+   
+    import { TsaPlugin } from 'blueprint-tsa';
     
     export const config = {
         plugins: [
             new TsaPlugin(),
         ],
-    };" > blueprint.config.ts
+    };
     ```
 
 5. Test the plugin calling the following command in the project directory:

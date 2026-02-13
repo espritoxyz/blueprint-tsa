@@ -51,7 +51,7 @@ const loadFuncSources = (filePath: string, baseDir: string, loaded: Set<string> 
   return sources;
 };
 
-export const compileFuncFile = async (filePath: string, fileName: string): Promise<string> => {
+export const compileFuncFileToBase64Boc = async (filePath: string, fileName: string): Promise<string> => {
   const fileDir = path.dirname(filePath);
   const sources = loadFuncSources(fileName, fileDir);
 
