@@ -19,6 +19,7 @@ export const REPLAY_ATTACK_CHECK_ID = "replay-attack-check";
 
 export const OWNER_HIJACK_CHECK = "owner-hijack-check";
 export const OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME = "owner-hijack-symbolic.fc";
+export const OWNER_HIJACK_CHECK_CONCRETE_FILENAME = "owner-hijack-concrete.fc";
 export const OWNER_HIJACK_CHECK_ID = "owner-hijack";
 
 export const ERROR_EXIT_CODE = 1000;

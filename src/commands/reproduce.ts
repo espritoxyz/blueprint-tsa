@@ -68,11 +68,10 @@ export const executeReproduceCommand = async (context: CommandContext, parsedArg
       suggestedBalance: BigInt(configJson.suggestedBalance),
       suggestedValue: BigInt(configJson.suggestedValue),
     };
-    const emptyAddress = Address.parseRaw("0:0000000000000000000000000000000000000000000000000000000000000000");
     const useExistingContract = await ui.prompt("Do you want to reuse an already deployed contract?");
 
     const getUserInputAddress = async () => {
-      return await ui.inputAddress("Input the address to deploy contract to (or press Enter to deploy new contract", emptyAddress);
+      return await ui.inputAddress("Input the address to deploy contract to");
     };
     const deployChameleon = async () => {
       const nonces = Array.from(Array(8), () => BigInt(Math.floor(Math.random() * (1 << 29))));
@@ -97,7 +96,8 @@ export const executeReproduceCommand = async (context: CommandContext, parsedArg
       contractAddress: address,
       senderAddress,
       ui,
-      timeout: configJson.timeout ?? null
+      timeout: configJson.timeout,
+      concreteCheckerOptions: configJson.concreteCheckerOptions,
     };
 
     const vulnerability = await runConcreteAnalysis(configJson.command, concreteAnalysisConfig);
