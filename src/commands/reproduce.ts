@@ -34,6 +34,7 @@ async function checkAddressContainsExpectedData(network: NetworkProvider, querie
   }
   if (dataMatches) {
     ui.write(`${Sym.OK} The data stored at contract matches the expected data.`);
+    ui.write(`${Sym.OK} Balance: ${contractState.balance}.`);
   } else {
     ui.write(`${Sym.ERR} Contract data on the contract does not match data on the config`);
     process.exit(1);
