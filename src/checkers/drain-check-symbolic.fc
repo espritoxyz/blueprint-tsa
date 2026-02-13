@@ -40,14 +40,6 @@ global int received_value;
 
     tsa_forbid_failures();
 
-    slice ds = get_data().begin_parse();
-    int nonce_method_id = ds~load_uint(32);
-    int nonce_value = ds~load_uint(64);
-    if (nonce_method_id != 0) {
-        int nonce = tsa_call_1_0(1, nonce_method_id);
-        tsa_assert(nonce == nonce_value);
-    }
-
     tsa_send_internal_message(1, 0);
 
     tsa_allow_failures();
