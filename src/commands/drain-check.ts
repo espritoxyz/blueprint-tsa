@@ -36,10 +36,6 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
           type: "number",
           description: "Analysis timeout in milliseconds",
         })
-        .option("nonce", {
-          type: "string",
-          description: "Name of get-method for extracting nonce in C4",
-        })
         .option("contract", {
           alias: "c",
           type: "string",
@@ -88,15 +84,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     },
   ];
 
-  let nonceMethodId = 0;
-  if (parsedArgs.nonce) {
-    nonceMethodId = getMethodId(parsedArgs.nonce);
-  }
-
-  const checkerCell = beginCell()
-    .storeUint(nonceMethodId, 32)
-    .storeUint(Math.floor(Math.random() * 0x10000000000000000), 64)
-    .endCell();
+  const checkerCell = beginCell().endCell();
 
   const analyzer = new AnalyzerWrapper({
     ui,
