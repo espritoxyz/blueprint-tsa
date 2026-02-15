@@ -1,7 +1,6 @@
 import path from "path";
 import os from "os";
 import fs from "fs";
-import { fileURLToPath } from "url";
 import { mapOSToJavaBinary } from "../install/architecture.js";
 import { TSA_NAME } from "./constants.js";
 
@@ -91,8 +90,7 @@ export const findTsaPath = (): string | null => {
 };
 
 export const getCheckerPath = (checkerName: string): string => {
-  const currentFilePath = fileURLToPath(import.meta.url);
-  return path.join(path.dirname(currentFilePath), "../../src/checkers", checkerName);
+  return path.join(path.dirname(__filename), "../../src/checkers", checkerName);
 };
 
 export const getSarifReportPath = (id: string): string => {

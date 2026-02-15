@@ -1,5 +1,4 @@
 {
-  "type": "module",
   "name": "blueprint-tsa",
   "version": "1.0.0",
   "description": "TSA plugin for TON Blueprint",
