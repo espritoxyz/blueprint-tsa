@@ -1,7 +1,7 @@
 import path from "path";
 import {Argv} from "yargs";
 import {existsSync} from "fs";
-import {beginCell, toNano} from "@ton/core";
+import {beginCell, getMethodId, toNano} from "@ton/core";
 import {TreeProperty} from "../common/draw.js";
 import {CommandContext, CommandHandler} from "../cli.js";
 import {AnalyzerWrapper} from "../common/analyzer-wrapper.js";
@@ -43,10 +43,10 @@ export const configureOwnerHijackCommand = (context: CommandContext): any => ({
         description: "Contract name",
         demandOption: true,
       })
-      .option("methodid", {
+      .option("method-name", {
         alias: "m",
-        type: "number",
-        description: "The method id of get_owner getter",
+        type: "string",
+        description: "The method name of get_owner getter",
         demandOption: true,
       })
       .option("verbose", {
@@ -65,12 +65,7 @@ const extractOptions = (ui: UIProvider, parsedArgs: any) => {
   }
 
   const timeout: number | null = parsedArgs.timeout ?? null;
-
-  const methodid = parsedArgs.methodid;
-  if (typeof methodid != "number") {
-    ui.write("methodId required");
-    process.exit(-1);
-  }
+  const methodid = getMethodId(parsedArgs.methodName);
 
   if (!Number.isInteger(methodid)) {
     throw new Error("MethodId is not an integer");
