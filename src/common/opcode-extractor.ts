@@ -46,7 +46,7 @@ export async function extractOpcodes(config: OpcodeExtractorConfig): Promise<num
 
     // Read and parse the output file
     const content = readFileSync(outputFile, "utf-8").trim();
-    const opcodes = content.split(",").map((op) => parseInt(op.trim(), 10));
+    const opcodes = content.split("\n").map((op) => parseInt(op.trim(), 10));
 
     config.ui.write(`Extracted opcodes: [${opcodes.map((op) => `0x${op.toString(16).padStart(8, "0")}`).join(", ")}]`);
 
