@@ -1,22 +1,22 @@
 import path from "path";
-import {Argv} from "yargs";
-import {existsSync} from "fs";
-import {beginCell, toNano} from "@ton/core";
-import {TreeProperty} from "../common/draw.js";
-import {CommandHandler, CommandContext} from "../cli.js";
-import {ReproduceParameters} from "../reproduce/network.js";
-import {ConcreteAnalysisConfig} from "../reproduce/concrete-analysis.js";
-import {AnalyzerWrapper} from "../common/analyzer-wrapper.js";
-import {writeReproduceConfig} from "../reproduce/build-config.js";
+import yargs, { Argv } from "yargs";
+import { existsSync } from "fs";
+import { beginCell, toNano } from "@ton/core";
+import { TreeProperty } from "../common/draw.js";
+import { CommandHandler, CommandContext } from "../cli.js";
+import { ReproduceParameters } from "../reproduce/network.js";
+import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
+import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
+import { writeReproduceConfig } from "../reproduce/build-config.js";
 import {
   Sym,
   DRAIN_CHECK_SYMBOLIC_FILENAME,
   DRAIN_CHECK_ID,
   DRAIN_CHECK_CONCRETE_FILENAME,
-  ERROR_EXIT_CODE
+  ERROR_EXIT_CODE,
 } from "../common/constants.js";
-import {buildContracts} from "../common/build-utils.js";
-import {printCleanupInstructions} from "../reproduce/utils.js";
+import { buildContracts } from "../common/build-utils.js";
+import { printCleanupInstructions } from "../reproduce/utils.js";
 import {
   findCompiledContract,
   getCheckerPath,
@@ -24,11 +24,11 @@ import {
   getReportDirectory,
   getReproduceConfigPath,
 } from "../common/paths.js";
-import {extractOpcodes} from "../common/opcode-extractor.js";
+import { extractOpcodes } from "../common/opcode-extractor.js";
 
 const ONE_MINUTE_SECONDS = 60;
 
-export const configureDrainCheckCommand = (context: CommandContext): any => {
+export const configureDrainCheckCommand = (context: CommandContext) => {
   return {
     command: DRAIN_CHECK_ID,
     description: "Analyze contract for drain vulnerabilities",
@@ -52,16 +52,20 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
         })
         .option("disable-opcode-extraction", {
           type: "boolean",
-          description: "Disable opcode extraction. This affects path selection strategy and default timeout.",
+          description:
+            "Disable opcode extraction. This affects path selection strategy and default timeout.",
         }),
-    handler: async (argv: any) => {
+    handler: async (argv: yargs.ArgumentsCamelCase) => {
       await drainCheckCommand(context, argv);
     },
   };
 };
 
-const drainCheckCommand: CommandHandler = async (context: CommandContext, parsedArgs: any) => {
-  const {ui} = context;
+const drainCheckCommand: CommandHandler = async (
+  context: CommandContext,
+  parsedArgs: any,
+) => {
+  const { ui } = context;
 
   await buildContracts(ui);
 
@@ -78,7 +82,11 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
 
   let opcodes: number[] = [];
   if (!parsedArgs["disable-opcode-extraction"]) {
-    opcodes = await extractOpcodes({ ui, codePath: contractPath, contractName: contract });
+    opcodes = await extractOpcodes({
+      ui,
+      codePath: contractPath,
+      contractName: contract,
+    });
   }
 
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
@@ -88,17 +96,22 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   if (timeout === null && opcodes.length > 0) {
     timeout = ONE_MINUTE_SECONDS * (opcodes.length + 1);
     ui.write("");
-    ui.write("The timeout was calculated automatically based on the number of opcodes.");
+    ui.write(
+      "The timeout was calculated automatically based on the number of opcodes.",
+    );
   }
 
   const properties: TreeProperty[] = [
-    {key: "Contract", value: contract},
-    {key: "Mode", value: "TON drain"},
+    { key: "Contract", value: contract },
+    { key: "Mode", value: "TON drain" },
     {
       key: "Options",
       separator: true,
       children: [
-        {key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set"}
+        {
+          key: "Timeout",
+          value: timeout !== null ? `${timeout} seconds` : "not set",
+        },
       ],
     },
   ];
@@ -141,7 +154,9 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   printCleanupInstructions(ui);
 
   if (vulnerability != null) {
-    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {kind: DRAIN_CHECK_ID});
+    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {
+      kind: DRAIN_CHECK_ID,
+    });
     const configPath = getReproduceConfigPath(analyzer.id);
     const relativeConfigPath = path.relative(process.cwd(), configPath);
     ui.write("To reproduce the vulnerability on the blockchain, run:");
@@ -151,8 +166,10 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   }
 };
 
-export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promise<ReproduceParameters | null> => {
-  const {ui} = config;
+export const drainCheckConcrete = async (
+  config: ConcreteAnalysisConfig,
+): Promise<ReproduceParameters | null> => {
+  const { ui } = config;
 
   if (!existsSync(config.codePath)) {
     ui.write(`\n${Sym.ERR} Code at ${config.codePath} not found`);
@@ -162,19 +179,24 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
   const timeout = config.timeout;
 
   const properties: TreeProperty[] = [
-    {key: "Contract", value: config.contractAddress.toRawString()},
-    {key: "Mode", value: "TON drain reproduction"},
+    { key: "Contract", value: config.contractAddress.toRawString() },
+    { key: "Mode", value: "TON drain reproduction" },
     {
       key: "Options",
       separator: true,
       children: [
-        {key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set"},
-        {key: "Sender", value: config.senderAddress.toRawString()}
+        {
+          key: "Timeout",
+          value: timeout !== null ? `${timeout} seconds` : "not set",
+        },
+        { key: "Sender", value: config.senderAddress.toRawString() },
       ],
     },
   ];
 
-  const maxTons = toNano(await ui.input("Enter maximum amount of TONs for reproduction message:"));
+  const maxTons = toNano(
+    await ui.input("Enter maximum amount of TONs for reproduction message:"),
+  );
 
   const checkerPath = getCheckerPath(DRAIN_CHECK_CONCRETE_FILENAME);
   const checkerCell = beginCell()
@@ -215,7 +237,9 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
 
   const vulnerability = analyzer.getVulnerability();
   if (vulnerability == null) {
-    ui.write(`${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`);
+    ui.write(
+      `${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`,
+    );
     return null;
   }
 

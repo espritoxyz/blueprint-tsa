@@ -1,20 +1,21 @@
 import path from "path";
-import {Argv} from "yargs";
-import {existsSync} from "fs";
-import {beginCell, getMethodId, toNano} from "@ton/core";
-import {TreeProperty} from "../common/draw.js";
-import {CommandContext, CommandHandler} from "../cli.js";
-import {AnalyzerWrapper} from "../common/analyzer-wrapper.js";
-import {writeReproduceConfig} from "../reproduce/build-config.js";
+import { Argv } from "yargs";
+import { existsSync } from "fs";
+import { beginCell, getMethodId, toNano } from "@ton/core";
+import { TreeProperty } from "../common/draw.js";
+import { CommandContext, CommandHandler } from "../cli.js";
+import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
+import { writeReproduceConfig } from "../reproduce/build-config.js";
 import {
   ERROR_EXIT_CODE,
-  OWNER_HIJACK_CHECK, OWNER_HIJACK_CHECK_CONCRETE_FILENAME,
+  OWNER_HIJACK_CHECK,
+  OWNER_HIJACK_CHECK_CONCRETE_FILENAME,
   OWNER_HIJACK_CHECK_ID,
   OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME,
-  Sym
+  Sym,
 } from "../common/constants.js";
-import {buildContracts} from "../common/build-utils.js";
-import {printCleanupInstructions} from "../reproduce/utils.js";
+import { buildContracts } from "../common/build-utils.js";
+import { printCleanupInstructions } from "../reproduce/utils.js";
 import {
   findCompiledContract,
   getCheckerPath,
@@ -22,10 +23,10 @@ import {
   getReproduceConfigPath,
   getSarifReportPath,
 } from "../common/paths.js";
-import {UIProvider} from "@ton/blueprint";
-import {ConcreteAnalysisConfig} from "../reproduce/concrete-analysis.js";
-import {ReproduceParameters} from "../reproduce/network.js";
-import {OwnerHijackOptions} from "../reproduce/reproduce-config.js";
+import { UIProvider } from "@ton/blueprint";
+import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
+import { ReproduceParameters } from "../reproduce/network.js";
+import { OwnerHijackOptions } from "../reproduce/reproduce-config.js";
 
 export const configureOwnerHijackCommand = (context: CommandContext): any => ({
   command: OWNER_HIJACK_CHECK,
@@ -57,7 +58,6 @@ export const configureOwnerHijackCommand = (context: CommandContext): any => ({
   handler: async (argv: any) => await ownerHijackCommand(context, argv),
 });
 
-
 const extractOptions = (ui: UIProvider, parsedArgs: any) => {
   const contract = parsedArgs.contract;
   if (typeof contract !== "string") {
@@ -79,29 +79,35 @@ const extractOptions = (ui: UIProvider, parsedArgs: any) => {
   };
 
   const properties: TreeProperty[] = [
-    {key: "Contract", value: options.contract},
-    {key: "Mode", value: "TON owner hijack"},
+    { key: "Contract", value: options.contract },
+    { key: "Mode", value: "TON owner hijack" },
     {
       key: "Options",
       separator: true,
       children: [
-        {key: "Timeout", value: options.timeout !== null ? `${(options.timeout)} seconds` : "not set"},
-        {key: "Method id", value: options.methodId.toString()}
+        {
+          key: "Timeout",
+          value:
+            options.timeout !== null ? `${options.timeout} seconds` : "not set",
+        },
+        { key: "Method id", value: options.methodId.toString() },
       ],
     },
   ];
-  return {options, properties};
+  return { options, properties };
 };
 
-
-const ownerHijackCommand: CommandHandler = async (context: CommandContext, parsedArgs: any) => {
-  const {ui} = context;
+const ownerHijackCommand: CommandHandler = async (
+  context: CommandContext,
+  parsedArgs: any,
+) => {
+  const { ui } = context;
   await buildContracts(ui);
-  const {options, properties} = extractOptions(ui, parsedArgs);
+  const { options, properties } = extractOptions(ui, parsedArgs);
 
   const contractPath = findCompiledContract(options.contract);
   if (!existsSync(contractPath)) {
-    ui.write(`\n${Sym.ERR} Contract ${(options.contract)} not found`);
+    ui.write(`\n${Sym.ERR} Contract ${options.contract} not found`);
     process.exit(1);
   }
 
@@ -118,7 +124,7 @@ const ownerHijackCommand: CommandHandler = async (context: CommandContext, parse
   const reportDir = getReportDirectory(analyzer.id);
   const sarifPath = getSarifReportPath(analyzer.id);
 
-  await analyzer.run(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME, wrapper => [
+  await analyzer.run(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME, (wrapper) => [
     "custom-checker-compiled",
     "--checker",
     wrapper.getTempBocPath(),
@@ -130,7 +136,9 @@ const ownerHijackCommand: CommandHandler = async (context: CommandContext, parse
     wrapper.getTempCheckerCellPath(),
     "--output",
     sarifPath,
-    ...(options.timeout != null ? ["--timeout", options.timeout.toString()] : []),
+    ...(options.timeout != null
+      ? ["--timeout", options.timeout.toString()]
+      : []),
     "--exported-inputs",
     reportDir,
     ...(parsedArgs.verbose ? ["-v"] : []),
@@ -142,10 +150,16 @@ const ownerHijackCommand: CommandHandler = async (context: CommandContext, parse
   printCleanupInstructions(ui);
 
   if (vulnerability != null) {
-    writeReproduceConfig(vulnerability, OWNER_HIJACK_CHECK_ID, options.timeout, analyzer.id, {
-      kind: "owner-hijack-check",
-      methodId: options.methodId.toString(),
-    });
+    writeReproduceConfig(
+      vulnerability,
+      OWNER_HIJACK_CHECK_ID,
+      options.timeout,
+      analyzer.id,
+      {
+        kind: "owner-hijack-check",
+        methodId: options.methodId.toString(),
+      },
+    );
     const configPath = getReproduceConfigPath(analyzer.id);
     const relativeConfigPath = path.relative(process.cwd(), configPath);
     ui.write("To reproduce the vulnerability on the blockchain, run:");
@@ -155,21 +169,28 @@ const ownerHijackCommand: CommandHandler = async (context: CommandContext, parse
   }
 };
 
-
-const readNanotons = async (request: string, ui: UIProvider): Promise<bigint> => {
+const readNanotons = async (
+  request: string,
+  ui: UIProvider,
+): Promise<bigint> => {
   while (true) {
     const userInput = await ui.input(request);
     try {
       return toNano(userInput);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
-      ui.write(`Your input (${userInput}) was of not correct nanoton format. Please try again.`);
+      ui.write(
+        `Your input (${userInput}) was of not correct nanoton format. Please try again.`,
+      );
     }
   }
 };
 
-export const ownerHijackCheckConcrete = async (config: ConcreteAnalysisConfig, concreteCheckerOptions: OwnerHijackOptions): Promise<ReproduceParameters | null> => {
-  const {ui} = config;
+export const ownerHijackCheckConcrete = async (
+  config: ConcreteAnalysisConfig,
+  concreteCheckerOptions: OwnerHijackOptions,
+): Promise<ReproduceParameters | null> => {
+  const { ui } = config;
 
   if (!existsSync(config.codePath)) {
     ui.write(`\n${Sym.ERR} Code at ${config.codePath} not found`);
@@ -179,20 +200,29 @@ export const ownerHijackCheckConcrete = async (config: ConcreteAnalysisConfig, c
   const timeout = config.timeout;
 
   const properties: TreeProperty[] = [
-    {key: "Contract", value: config.contractAddress.toRawString()},
-    {key: "Mode", value: "TON owner hijack reproduction"},
+    { key: "Contract", value: config.contractAddress.toRawString() },
+    { key: "Mode", value: "TON owner hijack reproduction" },
     {
       key: "Options",
       separator: true,
       children: [
-        {key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set"},
-        {key: "Method id", value: timeout !== null ? `${timeout} seconds` : "not set"},
-        {key: "Sender", value: config.senderAddress.toRawString()}
+        {
+          key: "Timeout",
+          value: timeout !== null ? `${timeout} seconds` : "not set",
+        },
+        {
+          key: "Method id",
+          value: timeout !== null ? `${timeout} seconds` : "not set",
+        },
+        { key: "Sender", value: config.senderAddress.toRawString() },
       ],
     },
   ];
 
-  const maxTons = await readNanotons("Enter maximum amount of TONs for reproduction message:", ui);
+  const maxTons = await readNanotons(
+    "Enter maximum amount of TONs for reproduction message:",
+    ui,
+  );
 
   const checkerPath = getCheckerPath(OWNER_HIJACK_CHECK_CONCRETE_FILENAME);
   const getMethodId = () => {
@@ -201,11 +231,15 @@ export const ownerHijackCheckConcrete = async (config: ConcreteAnalysisConfig, c
       return BigInt(stringedMethodId);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error: unknown) {
-      throw new Error(`Invalid BigInt string format (${stringedMethodId}) stored as methodId`);
+      throw new Error(
+        `Invalid BigInt string format (${stringedMethodId}) stored as methodId`,
+      );
     }
   };
   const methodId = getMethodId();
-  console.log(`methodId=${methodId} maxTons=${maxTons} address=${config.senderAddress.toRawString()}`);
+  console.log(
+    `methodId=${methodId} maxTons=${maxTons} address=${config.senderAddress.toRawString()}`,
+  );
   const checkerCell = beginCell()
     .storeInt(methodId, 32)
     .storeAddress(config.senderAddress)
@@ -241,12 +275,14 @@ export const ownerHijackCheckConcrete = async (config: ConcreteAnalysisConfig, c
     "--exported-inputs",
     getReportDirectory(wrapper.id),
     ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
-    "-v"
+    "-v",
   ]);
 
   const vulnerability = analyzer.getVulnerability();
   if (vulnerability == null) {
-    ui.write(`${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`);
+    ui.write(
+      `${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`,
+    );
     return null;
   }
 

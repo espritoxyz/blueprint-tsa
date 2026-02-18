@@ -6,8 +6,7 @@ import path from "path";
 import * as tar from "tar";
 import { extractZip } from "./unzip.js";
 
-const apiLink =
-  `https://api.adoptium.net/v3/binary/latest/17/ga/${adoptiumOS}/${adoptiumArch}/jre/hotspot/normal/eclipse`;
+const apiLink = `https://api.adoptium.net/v3/binary/latest/17/ga/${adoptiumOS}/${adoptiumArch}/jre/hotspot/normal/eclipse`;
 
 const downloadArchiveWithJava = (filePath: string): Promise<void> => {
   return new Promise((resolve, reject) => {
@@ -20,7 +19,10 @@ const downloadArchiveWithJava = (filePath: string): Promise<void> => {
   });
 };
 
-const unpackArchive = (archivePath: string, extractPath: string): Promise<void> => {
+const unpackArchive = (
+  archivePath: string,
+  extractPath: string,
+): Promise<void> => {
   if (!fs.existsSync(extractPath)) {
     fs.mkdirSync(extractPath, { recursive: true });
   }

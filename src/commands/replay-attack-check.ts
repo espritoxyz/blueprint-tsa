@@ -8,7 +8,7 @@ import {
   Sym,
   REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME,
   REPLAY_ATTACK_CHECK_ID,
-  ERROR_EXIT_CODE
+  ERROR_EXIT_CODE,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
 import { printCleanupInstructions } from "../reproduce/utils.js";
@@ -19,7 +19,9 @@ import {
   getReportDirectory,
 } from "../common/paths.js";
 
-export const configureReplayAttackCheckCommand = (context: CommandContext): any => {
+export const configureReplayAttackCheckCommand = (
+  context: CommandContext,
+): any => {
   return {
     command: REPLAY_ATTACK_CHECK_ID,
     description: "Analyze contract for replay attack vulnerabilities",
@@ -47,7 +49,10 @@ export const configureReplayAttackCheckCommand = (context: CommandContext): any 
   };
 };
 
-const replayAttackCheckCommand: CommandHandler = async (context: CommandContext, parsedArgs: any) => {
+const replayAttackCheckCommand: CommandHandler = async (
+  context: CommandContext,
+  parsedArgs: any,
+) => {
   const { ui } = context;
 
   await buildContracts(ui);
@@ -73,7 +78,10 @@ const replayAttackCheckCommand: CommandHandler = async (context: CommandContext,
       key: "Options",
       separator: true,
       children: [
-        { key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set" }
+        {
+          key: "Timeout",
+          value: timeout !== null ? `${timeout} seconds` : "not set",
+        },
       ],
     },
   ];

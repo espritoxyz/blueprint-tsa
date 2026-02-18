@@ -61,7 +61,9 @@ export const findJavaBinPath = (): string | null => {
 
   // If exactly one item, use it as the jre path
   if (contents.length != 1) {
-    throw new Error(`Unexpected content in JRE directory: expected empty or single directory, found ${contents.length} items`);
+    throw new Error(
+      `Unexpected content in JRE directory: expected empty or single directory, found ${contents.length} items`,
+    );
   }
 
   const javaHomePath = path.join(jre, contents[0]);

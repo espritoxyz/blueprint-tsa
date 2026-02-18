@@ -1,8 +1,11 @@
-import {writeFileSync} from "fs";
-import {VulnerabilityDescription} from "../common/analyzer-wrapper.js";
-import {getReproduceConfigPath} from "../common/paths.js";
-import {DEPLOY_AND_REPRODUCE_COMMAND} from "../common/constants.js";
-import {ConcreteCheckerOptions, TsaVulnerabilityConfig} from "./reproduce-config.js";
+import { writeFileSync } from "fs";
+import { VulnerabilityDescription } from "../common/analyzer-wrapper.js";
+import { getReproduceConfigPath } from "../common/paths.js";
+import { DEPLOY_AND_REPRODUCE_COMMAND } from "../common/constants.js";
+import {
+  ConcreteCheckerOptions,
+  TsaVulnerabilityConfig,
+} from "./reproduce-config.js";
 
 export const writeReproduceConfig = (
   vulnerability: VulnerabilityDescription,
