@@ -35,7 +35,7 @@ export const configureOwnerHijackCommand = (context: CommandContext): any => ({
       .option("timeout", {
         alias: "t",
         type: "number",
-        description: "Analysis timeout in milliseconds",
+        description: "Analysis timeout in seconds",
       })
       .option("contract", {
         alias: "c",

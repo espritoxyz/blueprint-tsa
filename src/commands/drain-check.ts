@@ -1,13 +1,13 @@
 import path from "path";
-import { Argv } from "yargs";
-import { existsSync } from "fs";
-import { beginCell, toNano } from "@ton/core";
-import { TreeProperty } from "../common/draw.js";
-import { CommandHandler, CommandContext } from "../cli.js";
-import { ReproduceConfig } from "../reproduce/network.js";
-import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
-import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
-import { writeReproduceConfig } from "../reproduce/build-config.js";
+import {Argv} from "yargs";
+import {existsSync} from "fs";
+import {beginCell, toNano} from "@ton/core";
+import {TreeProperty} from "../common/draw.js";
+import {CommandHandler, CommandContext} from "../cli.js";
+import {ReproduceParameters} from "../reproduce/network.js";
+import {ConcreteAnalysisConfig} from "../reproduce/concrete-analysis.js";
+import {AnalyzerWrapper} from "../common/analyzer-wrapper.js";
+import {writeReproduceConfig} from "../reproduce/build-config.js";
 import {
   Sym,
   DRAIN_CHECK_SYMBOLIC_FILENAME,
@@ -24,7 +24,7 @@ import {
   getReportDirectory,
   getReproduceConfigPath,
 } from "../common/paths.js";
-import { extractOpcodes } from "../common/opcode-extractor.js";
+import {extractOpcodes} from "../common/opcode-extractor.js";
 
 const ONE_MINUTE_SECONDS = 60;
 
@@ -37,7 +37,7 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
         .option("timeout", {
           alias: "t",
           type: "number",
-          description: "Analysis timeout in milliseconds",
+          description: "Analysis timeout in seconds",
         })
         .option("contract", {
           alias: "c",
@@ -128,7 +128,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     wrapper.getTempCheckerCellPath(),
     "--output",
     sarifPath,
-    ...(timeout != null ? ["--timeout", (timeout * 1000).toString()] : []),
+    ...(timeout != null ? ["--timeout", timeout.toString()] : []),
     "--exported-inputs",
     reportDir,
     ...(parsedArgs.verbose ? ["-v"] : []),
@@ -141,7 +141,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   printCleanupInstructions(ui);
 
   if (vulnerability != null) {
-    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout ? timeout * 1000 : null, analyzer.id);
+    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {kind: DRAIN_CHECK_ID});
     const configPath = getReproduceConfigPath(analyzer.id);
     const relativeConfigPath = path.relative(process.cwd(), configPath);
     ui.write("To reproduce the vulnerability on the blockchain, run:");
@@ -210,7 +210,7 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
     getSarifReportPath(wrapper.id),
     "--exported-inputs",
     getReportDirectory(wrapper.id),
-    ...(config.timeout != null ? ["--timeout", (config.timeout * 1000).toString()] : []),
+    ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
   ]);
 
   const vulnerability = analyzer.getVulnerability();
