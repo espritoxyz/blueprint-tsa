@@ -1,4 +1,4 @@
-name: Formatting
+name: Formatting and linting
 on:
   pull_request:
 permissions:
@@ -14,3 +14,6 @@ jobs:
       - run: |
           yarn
           yarn prettier . --check
+      - run: |
+          yarn
+          yarn lint --max-warnings 0
