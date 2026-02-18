@@ -1,7 +1,7 @@
 import path from "path";
 import {Argv} from "yargs";
 import {existsSync} from "fs";
-import {beginCell, getMethodId, toNano} from "@ton/core";
+import {beginCell, toNano} from "@ton/core";
 import {TreeProperty} from "../common/draw.js";
 import {CommandHandler, CommandContext} from "../cli.js";
 import {ReproduceParameters} from "../reproduce/network.js";
@@ -24,6 +24,9 @@ import {
   getReportDirectory,
   getReproduceConfigPath,
 } from "../common/paths.js";
+import {extractOpcodes} from "../common/opcode-extractor.js";
+
+const ONE_MINUTE_SECONDS = 60;
 
 export const configureDrainCheckCommand = (context: CommandContext): any => {
   return {
@@ -34,7 +37,7 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
         .option("timeout", {
           alias: "t",
           type: "number",
-          description: "Analysis timeout in milliseconds",
+          description: "Analysis timeout in seconds",
         })
         .option("contract", {
           alias: "c",
@@ -46,6 +49,10 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
           alias: "v",
           type: "boolean",
           description: "Use debug output in TSA log",
+        })
+        .option("disable-opcode-extraction", {
+          type: "boolean",
+          description: "Disable opcode extraction. This affects path selection strategy and default timeout.",
         }),
     handler: async (argv: any) => {
       await drainCheckCommand(context, argv);
@@ -69,8 +76,20 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     process.exit(1);
   }
 
+  let opcodes: number[] = [];
+  if (!parsedArgs["disable-opcode-extraction"]) {
+    opcodes = await extractOpcodes({ ui, codePath: contractPath, contractName: contract });
+  }
+
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
-  const timeout = parsedArgs.timeout ?? null;
+  let timeout = parsedArgs.timeout ?? null;
+
+  // If timeout wasn't provided, set it to 1 minute * (number_of_opcodes + 1)
+  if (timeout === null && opcodes.length > 0) {
+    timeout = ONE_MINUTE_SECONDS * (opcodes.length + 1);
+    ui.write("");
+    ui.write("The timeout was calculated automatically based on the number of opcodes.");
+  }
 
   const properties: TreeProperty[] = [
     {key: "Contract", value: contract},
@@ -113,6 +132,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
     "--exported-inputs",
     reportDir,
     ...(parsedArgs.verbose ? ["-v"] : []),
+    ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
   ]);
 
   const vulnerability = analyzer.getVulnerability();
@@ -121,7 +141,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   printCleanupInstructions(ui);
 
   if (vulnerability != null) {
-    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {kind: "drain-check"});
+    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {kind: DRAIN_CHECK_ID});
     const configPath = getReproduceConfigPath(analyzer.id);
     const relativeConfigPath = path.relative(process.cwd(), configPath);
     ui.write("To reproduce the vulnerability on the blockchain, run:");

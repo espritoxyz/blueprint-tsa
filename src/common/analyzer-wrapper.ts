@@ -24,7 +24,7 @@ import {
  */
 export interface AnalyzerWrapperConfig {
   ui: UIProvider;
-  checkerPath: string;
+  checkerPath: string | null;
   checkerCell: Cell;
   properties: TreeProperty[];
   codePath: string;
@@ -86,7 +86,7 @@ export class AnalyzerWrapper {
    * Validates that checker file exists
    */
   private validateCheckerFile(): void {
-    if (!existsSync(this.config.checkerPath)) {
+    if (this.config.checkerPath != null && !existsSync(this.config.checkerPath)) {
       this.config.ui.write(`\n${Sym.ERR} Checker file not found at ${this.config.checkerPath}`);
       process.exit(1);
     }
@@ -96,6 +96,10 @@ export class AnalyzerWrapper {
    * Compiles FunC checker to BoC and writes to temporary file
    */
   private async compileChecker(checkerFilename: string): Promise<void> {
+    if (this.config.checkerPath == null) {
+      return;
+    }
+
     this.config.ui.setActionPrompt(`${Sym.WAIT} Compiling checker...`);
 
     try {
@@ -156,10 +160,12 @@ export class AnalyzerWrapper {
    * @param checkerFilename - Name of the checker file to compile
    * @param buildArgs - Callback function to build analyzer arguments after compilation
    */
-  async run(checkerFilename: string, buildArgs: (wrapper: this) => string[]): Promise<void> {
+  async run(checkerFilename: string | null, buildArgs: (wrapper: this) => string[]): Promise<void> {
     this.printAnalysisInfo();
     this.validateCheckerFile();
-    await this.compileChecker(checkerFilename);
+    if (checkerFilename != null) {
+      await this.compileChecker(checkerFilename);
+    }
     this.writeCheckerCell();
 
     try {
