@@ -12,14 +12,20 @@ export const buildContracts = async (ui: UIProvider) => {
     ui.clearActionPrompt();
     ui.write((e as any).toString());
     ui.write(`\n${Sym.ERR} Failed to compile one of the files`);
-    ui.write("Please make sure you can run `blueprint build --all` successfully before running TSA.");
+    ui.write(
+      "Please make sure you can run `blueprint build --all` successfully before running TSA.",
+    );
     process.exit(1);
   }
   ui.clearActionPrompt();
   ui.write(`${Sym.OK} Compiled.\n`);
 };
 
-const loadFuncSources = (filePath: string, baseDir: string, loaded: Set<string> = new Set()): Record<string, string> => {
+const loadFuncSources = (
+  filePath: string,
+  baseDir: string,
+  loaded: Set<string> = new Set(),
+): Record<string, string> => {
   const sources: Record<string, string> = {};
   const absolutePath = path.resolve(baseDir, filePath);
   const normalizedPath = path.normalize(absolutePath);
@@ -35,7 +41,10 @@ const loadFuncSources = (filePath: string, baseDir: string, loaded: Set<string> 
   }
 
   const content = readFileSync(absolutePath, "utf-8");
-  const relativeKey = path.relative(baseDir, absolutePath).split(path.sep).join("/");
+  const relativeKey = path
+    .relative(baseDir, absolutePath)
+    .split(path.sep)
+    .join("/");
   sources[relativeKey] = content;
 
   // Parse #include statements
@@ -51,13 +60,16 @@ const loadFuncSources = (filePath: string, baseDir: string, loaded: Set<string> 
   return sources;
 };
 
-export const compileFuncFileToBase64Boc = async (filePath: string, fileName: string): Promise<string> => {
+export const compileFuncFileToBase64Boc = async (
+  filePath: string,
+  fileName: string,
+): Promise<string> => {
   const fileDir = path.dirname(filePath);
   const sources = loadFuncSources(fileName, fileDir);
 
   const compilationResult = await compileFunc({
     targets: [fileName],
-    sources
+    sources,
   });
 
   if (compilationResult.status === "error") {

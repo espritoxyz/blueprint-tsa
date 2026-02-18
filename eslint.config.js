@@ -3,6 +3,8 @@ import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import globals from "globals";
 
+import eslintConfigPrettier from "eslint-config-prettier/flat";
+
 export default [
   {
     ignores: ["dist", "node_modules"],
@@ -32,9 +34,10 @@ export default [
         },
       ],
       "@typescript-eslint/no-explicit-any": "off",
-      "indent": ["error", 2],
-      "semi": ["error", "always"],
-      "quotes": ["error", "double"],
+      indent: ["error", 2],
+      semi: ["error", "always"],
+      quotes: ["error", "double"],
     },
   },
+  eslintConfigPrettier,
 ];

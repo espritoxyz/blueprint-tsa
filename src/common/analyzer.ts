@@ -18,7 +18,10 @@ export class Analyzer {
     return new Analyzer(javaPath, tsaJarPath);
   }
 
-  run(args: string[], logPath?: string): Promise<{ stdout: string; stderr: string }> {
+  run(
+    args: string[],
+    logPath?: string,
+  ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       const allArgs = ["-jar", this.tsaJarPath, ...args];
       const proc = spawn(this.javaPath, allArgs);

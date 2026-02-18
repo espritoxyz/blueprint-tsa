@@ -4,16 +4,24 @@ import fs from "fs";
 
 const REDIRECT_STATUS_CODES = [301, 302, 303, 307, 308];
 
-export const downloadWithRedirect = (url: string, filePath: string): Promise<void> => {
+export const downloadWithRedirect = (
+  url: string,
+  filePath: string,
+): Promise<void> => {
   return new Promise((resolve, reject) => {
     const protocol = url.startsWith("https") ? https : http;
     protocol
       .get(url, (response) => {
-        if (response.statusCode && REDIRECT_STATUS_CODES.includes(response.statusCode)) {
+        if (
+          response.statusCode &&
+          REDIRECT_STATUS_CODES.includes(response.statusCode)
+        ) {
           const redirectUrl = response.headers.location;
           if (redirectUrl) {
             response.resume();
-            downloadWithRedirect(redirectUrl, filePath).then(resolve).catch(reject);
+            downloadWithRedirect(redirectUrl, filePath)
+              .then(resolve)
+              .catch(reject);
             return;
           }
         }

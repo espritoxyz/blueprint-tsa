@@ -3,37 +3,33 @@ type AdoptiumArch = "aarch64" | "x64";
 
 function mapPlatformToAdoptium(
   osName: string,
-  arch: string
+  arch: string,
 ): [AdoptiumOS, AdoptiumArch] {
   let adoptiumOS: AdoptiumOS;
   switch (osName) {
-  case "darwin":
-    adoptiumOS = "mac";
-    break;
-  case "linux":
-    adoptiumOS = "linux";
-    break;
-  case "win32":
-    adoptiumOS = "windows";
-    break;
-  default:
-    throw new Error(
-      `unsupported OS for java runtime bootstrap: ${osName}`
-    );
+    case "darwin":
+      adoptiumOS = "mac";
+      break;
+    case "linux":
+      adoptiumOS = "linux";
+      break;
+    case "win32":
+      adoptiumOS = "windows";
+      break;
+    default:
+      throw new Error(`unsupported OS for java runtime bootstrap: ${osName}`);
   }
 
   let adoptiumArch: AdoptiumArch;
   switch (arch) {
-  case "arm64":
-    adoptiumArch = "aarch64";
-    break;
-  case "x64":
-    adoptiumArch = "x64";
-    break;
-  default:
-    throw new Error(
-      `unsupported arch for java runtime bootstrap: ${arch}`
-    );
+    case "arm64":
+      adoptiumArch = "aarch64";
+      break;
+    case "x64":
+      adoptiumArch = "x64";
+      break;
+    default:
+      throw new Error(`unsupported arch for java runtime bootstrap: ${arch}`);
   }
 
   return [adoptiumOS, adoptiumArch];
@@ -41,24 +37,26 @@ function mapPlatformToAdoptium(
 
 export const [adoptiumOS, adoptiumArch] = mapPlatformToAdoptium(
   process.platform,
-  process.arch
+  process.arch,
 );
 
 export const mapOSToJavaBinary = (): string => {
   let javaBinary: string;
 
   switch (adoptiumOS) {
-  case "mac":
-    javaBinary = "java";
-    break;
-  case "linux":
-    javaBinary = "java";
-    break;
-  case "windows":
-    javaBinary = "java.exe";
-    break;
-  default:
-    throw new Error(`unsupported OS for java runtime bootstrap: ${adoptiumOS}`);
+    case "mac":
+      javaBinary = "java";
+      break;
+    case "linux":
+      javaBinary = "java";
+      break;
+    case "windows":
+      javaBinary = "java.exe";
+      break;
+    default:
+      throw new Error(
+        `unsupported OS for java runtime bootstrap: ${adoptiumOS}`,
+      );
   }
 
   return javaBinary;

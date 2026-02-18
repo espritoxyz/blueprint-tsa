@@ -9,7 +9,10 @@ export const ensureTsaInstalled = async (): Promise<string> => {
     return tsaPath;
   }
 
-  await downloadWithRedirect(TSA_URL, path.join(findTSAHomeDirectory(), TSA_NAME));
+  await downloadWithRedirect(
+    TSA_URL,
+    path.join(findTSAHomeDirectory(), TSA_NAME),
+  );
 
   const result = findTsaPath();
   if (result == null) {

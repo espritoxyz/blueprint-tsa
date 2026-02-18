@@ -7,10 +7,7 @@ import { ensureTsaInstalled } from "./tsa-jar.js";
  */
 
 async function main(): Promise<void> {
-  await Promise.all([
-    ensureJavaInstalled(),
-    ensureTsaInstalled(),
-  ]);
+  await Promise.all([ensureJavaInstalled(), ensureTsaInstalled()]);
 }
 
 main();
