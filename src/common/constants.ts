@@ -5,7 +5,7 @@ export class Sym {
   public static WAIT = "⏳";
 }
 
-export const TSA_VERSION = "debug-21";
+export const TSA_VERSION = "debug-22";
 export const TSA_NAME = `tsa-cli-${TSA_VERSION}.jar`;
 export const TSA_URL = `https://github.com/tochilinak/tsa/releases/download/${TSA_VERSION}/tsa-cli.jar`;
 
@@ -16,6 +16,11 @@ export const REPRODUCE_ID = "reproduce";
 
 export const REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME = "replay-attack-symbolic.fc";
 export const REPLAY_ATTACK_CHECK_ID = "replay-attack-check";
+
+export const OWNER_HIJACK_CHECK = "owner-hijack-check";
+export const OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME = "owner-hijack-symbolic.fc";
+export const OWNER_HIJACK_CHECK_CONCRETE_FILENAME = "owner-hijack-concrete.fc";
+export const OWNER_HIJACK_CHECK_ID = "owner-hijack";
 
 export const ERROR_EXIT_CODE = 1000;
 export const EXPECTED_MESSAGE_IN_SARIF =

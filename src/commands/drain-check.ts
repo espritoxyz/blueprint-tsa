@@ -1,13 +1,13 @@
 import path from "path";
-import { Argv } from "yargs";
-import { existsSync } from "fs";
-import { beginCell, getMethodId, toNano } from "@ton/core";
-import { TreeProperty } from "../common/draw.js";
-import { CommandHandler, CommandContext } from "../cli.js";
-import { ReproduceConfig } from "../reproduce/network.js";
-import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
-import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
-import { writeReproduceConfig } from "../reproduce/build-config.js";
+import {Argv} from "yargs";
+import {existsSync} from "fs";
+import {beginCell, getMethodId, toNano} from "@ton/core";
+import {TreeProperty} from "../common/draw.js";
+import {CommandHandler, CommandContext} from "../cli.js";
+import {ReproduceParameters} from "../reproduce/network.js";
+import {ConcreteAnalysisConfig} from "../reproduce/concrete-analysis.js";
+import {AnalyzerWrapper} from "../common/analyzer-wrapper.js";
+import {writeReproduceConfig} from "../reproduce/build-config.js";
 import {
   Sym,
   DRAIN_CHECK_SYMBOLIC_FILENAME,
@@ -15,8 +15,8 @@ import {
   DRAIN_CHECK_CONCRETE_FILENAME,
   ERROR_EXIT_CODE
 } from "../common/constants.js";
-import { buildContracts } from "../common/build-utils.js";
-import { printCleanupInstructions } from "../reproduce/utils.js";
+import {buildContracts} from "../common/build-utils.js";
+import {printCleanupInstructions} from "../reproduce/utils.js";
 import {
   findCompiledContract,
   getCheckerPath,
@@ -54,7 +54,7 @@ export const configureDrainCheckCommand = (context: CommandContext): any => {
 };
 
 const drainCheckCommand: CommandHandler = async (context: CommandContext, parsedArgs: any) => {
-  const { ui } = context;
+  const {ui} = context;
 
   await buildContracts(ui);
 
@@ -73,13 +73,13 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   const timeout = parsedArgs.timeout ?? null;
 
   const properties: TreeProperty[] = [
-    { key: "Contract", value: contract },
-    { key: "Mode", value: "TON drain" },
+    {key: "Contract", value: contract},
+    {key: "Mode", value: "TON drain"},
     {
       key: "Options",
       separator: true,
       children: [
-        { key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set" }
+        {key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set"}
       ],
     },
   ];
@@ -121,7 +121,7 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   printCleanupInstructions(ui);
 
   if (vulnerability != null) {
-    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id);
+    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {kind: "drain-check"});
     const configPath = getReproduceConfigPath(analyzer.id);
     const relativeConfigPath = path.relative(process.cwd(), configPath);
     ui.write("To reproduce the vulnerability on the blockchain, run:");
@@ -131,8 +131,8 @@ const drainCheckCommand: CommandHandler = async (context: CommandContext, parsed
   }
 };
 
-export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promise<ReproduceConfig | null> => {
-  const { ui } = config;
+export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promise<ReproduceParameters | null> => {
+  const {ui} = config;
 
   if (!existsSync(config.codePath)) {
     ui.write(`\n${Sym.ERR} Code at ${config.codePath} not found`);
@@ -142,14 +142,14 @@ export const drainCheckConcrete = async (config: ConcreteAnalysisConfig): Promis
   const timeout = config.timeout;
 
   const properties: TreeProperty[] = [
-    { key: "Contract", value: config.contractAddress.toRawString() },
-    { key: "Mode", value: "TON drain reproduction" },
+    {key: "Contract", value: config.contractAddress.toRawString()},
+    {key: "Mode", value: "TON drain reproduction"},
     {
       key: "Options",
       separator: true,
       children: [
-        { key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set" },
-        { key: "Sender", value: config.senderAddress.toRawString() }
+        {key: "Timeout", value: timeout !== null ? `${timeout} seconds` : "not set"},
+        {key: "Sender", value: config.senderAddress.toRawString()}
       ],
     },
   ];

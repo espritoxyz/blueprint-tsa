@@ -9,7 +9,6 @@ export interface DeployConfig {
   data: Cell;
   suggestedBalance: bigint;
   suggestedValue: bigint;
-  deploymentMessage: Cell;
 }
 
 export interface DeployResult {
@@ -74,13 +73,13 @@ export const deployViaChameleon = async (network: NetworkProvider, config: Deplo
 };
 
 
-export interface ReproduceConfig {
+export interface ReproduceParameters {
   address: Address;
   msgBody: Cell;
   suggestedValue: bigint;
 }
 
-export const reproduce = async (network: NetworkProvider, config: ReproduceConfig) => {
+export const reproduce = async (network: NetworkProvider, config: ReproduceParameters) => {
   const ui = network.ui();
   ui.write(`Number of TONs for reproduction message: ${Number(config.suggestedValue) / 1e9}`);
   ui.write(`${Sym.WAIT} Sending a reproduction message`);
