@@ -27,6 +27,9 @@ import { UIProvider } from "@ton/blueprint";
 import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
 import { ReproduceParameters } from "../reproduce/network.js";
 import { OwnerHijackOptions } from "../reproduce/reproduce-config.js";
+import { extractOpcodes } from "../common/opcode-extractor.js";
+
+const ONE_MINUTE_SECONDS = 60;
 
 export const configureOwnerHijackCommand = (context: CommandContext): any => ({
   command: OWNER_HIJACK_CHECK,
@@ -54,6 +57,11 @@ export const configureOwnerHijackCommand = (context: CommandContext): any => ({
         alias: "v",
         type: "boolean",
         description: "Use debug output in TSA log",
+      })
+      .option("disable-opcode-extraction", {
+        type: "boolean",
+        description:
+          "Disable opcode extraction. This affects path selection strategy and default timeout.",
       }),
   handler: async (argv: any) => await ownerHijackCommand(context, argv),
 });
@@ -111,6 +119,33 @@ const ownerHijackCommand: CommandHandler = async (
     process.exit(1);
   }
 
+  let opcodes: number[] = [];
+  if (!parsedArgs["disable-opcode-extraction"]) {
+    opcodes = await extractOpcodes({
+      ui,
+      codePath: contractPath,
+      contractName: options.contract,
+    });
+  }
+
+  // If timeout wasn't provided, set it to 1 minute * (number_of_opcodes + 1)
+  if (options.timeout === null && opcodes.length > 0) {
+    options.timeout = ONE_MINUTE_SECONDS * (opcodes.length + 1);
+    ui.write("");
+    ui.write(
+      "The timeout was calculated automatically based on the number of opcodes.",
+    );
+  }
+
+  // Update properties to reflect the calculated timeout
+  const timeoutProperty = properties[2].children?.find(
+    (p) => p.key === "Timeout",
+  );
+  if (timeoutProperty) {
+    timeoutProperty.value =
+      options.timeout !== null ? `${options.timeout} seconds` : "not set";
+  }
+
   const checkerPath = getCheckerPath(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME);
   const checkerCell = beginCell().storeUint(options.methodId, 32).endCell();
   const analyzer = new AnalyzerWrapper({
@@ -136,12 +171,14 @@ const ownerHijackCommand: CommandHandler = async (
     wrapper.getTempCheckerCellPath(),
     "--output",
     sarifPath,
-    ...(options.timeout != null
-      ? ["--timeout", options.timeout.toString()]
-      : []),
     "--exported-inputs",
     reportDir,
     ...(parsedArgs.verbose ? ["-v"] : []),
+    ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
+    "--disable-out-message-analysis",
+    ...(options.timeout != null
+      ? ["--timeout", options.timeout.toString()]
+      : []),
   ]);
 
   const vulnerability = analyzer.getVulnerability();
@@ -272,6 +309,7 @@ export const ownerHijackCheckConcrete = async (
     wrapper.getTempCheckerCellPath(),
     "--output",
     getSarifReportPath(wrapper.id),
+    "--disable-out-message-analysis",
     "--exported-inputs",
     getReportDirectory(wrapper.id),
     ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
