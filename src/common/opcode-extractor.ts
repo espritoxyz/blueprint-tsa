@@ -13,9 +13,13 @@ export interface OpcodeExtractorConfig {
   contractName: string;
 }
 
-export async function extractOpcodes(config: OpcodeExtractorConfig): Promise<number[]> {
+export async function extractOpcodes(
+  config: OpcodeExtractorConfig,
+): Promise<number[]> {
   config.ui.write("");
-  config.ui.write("Extracting contract opcodes for better path selection strategy...");
+  config.ui.write(
+    "Extracting contract opcodes for better path selection strategy...",
+  );
 
   const properties: TreeProperty[] = [
     { key: "Contract", value: config.contractName },
@@ -23,7 +27,10 @@ export async function extractOpcodes(config: OpcodeExtractorConfig): Promise<num
   ];
 
   // Create a temporary file for opcode output
-  const outputFile = join(tmpdir(), `opcodes-${randomBytes(8).toString("hex")}.txt`);
+  const outputFile = join(
+    tmpdir(),
+    `opcodes-${randomBytes(8).toString("hex")}.txt`,
+  );
 
   const analyzer = new AnalyzerWrapper({
     ui: config.ui,
@@ -33,13 +40,7 @@ export async function extractOpcodes(config: OpcodeExtractorConfig): Promise<num
     codePath: config.codePath,
   });
 
-  const args = [
-    "opcodes",
-    "--input",
-    config.codePath,
-    "--output",
-    outputFile,
-  ];
+  const args = ["opcodes", "--input", config.codePath, "--output", outputFile];
 
   try {
     await analyzer.run(null, () => args);
@@ -48,7 +49,9 @@ export async function extractOpcodes(config: OpcodeExtractorConfig): Promise<num
     const content = readFileSync(outputFile, "utf-8").trim();
     const opcodes = content.split("\n").map((op) => parseInt(op.trim(), 10));
 
-    config.ui.write(`Extracted opcodes: [${opcodes.map((op) => `0x${op.toString(16).padStart(8, "0")}`).join(", ")}]`);
+    config.ui.write(
+      `Extracted opcodes: [${opcodes.map((op) => `0x${op.toString(16).padStart(8, "0")}`).join(", ")}]`,
+    );
 
     return opcodes;
   } finally {

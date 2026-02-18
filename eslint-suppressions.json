@@ -1,9 +1,4 @@
 {
-  "src/cli.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/commands/clean.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 2
@@ -11,7 +6,7 @@
   },
   "src/commands/drain-check.ts": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 3
+      "count": 1
     }
   },
   "src/commands/owner-hijack-check.ts": {

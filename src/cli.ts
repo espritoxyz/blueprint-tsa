@@ -12,7 +12,10 @@ export interface CommandContext {
 }
 
 export interface CommandHandler {
-  (context: CommandContext, parsedArgs: any): Promise<void>;
+  (
+    context: CommandContext,
+    parsedArgs: yargs.ArgumentsCamelCase,
+  ): Promise<void>;
 }
 
 /**

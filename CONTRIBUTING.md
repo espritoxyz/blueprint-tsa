@@ -39,3 +39,14 @@
    ```bash
    yarn blueprint tsa
    ```
+
+## Linters
+
+Before pushing the code to the remote repository, format it using `yarn prettier . --write`
+
+On the CI [pipeline](.github/workflows/prettier.yml), the following checks are run:
+
+```
+yarn prettier . --check
+yarn lint --max-warnings 0
+```

@@ -7,7 +7,11 @@ import { Sym, ANALYSIS_INFO_TITLE } from "./constants.js";
 import { compileFuncFileToBase64Boc } from "./build-utils.js";
 import { Analyzer } from "./analyzer.js";
 import { generateTreeTable, TreeProperty } from "./draw.js";
-import { findExploitExecutionIndex, getMessageValue, getInitialBalance } from "./result-parsing.js";
+import {
+  findExploitExecutionIndex,
+  getMessageValue,
+  getInitialBalance,
+} from "./result-parsing.js";
 import {
   getSummaryPath,
   getSarifReportPath,
@@ -76,7 +80,10 @@ export class AnalyzerWrapper {
       return;
     }
 
-    const output = generateTreeTable(ANALYSIS_INFO_TITLE, this.config.properties);
+    const output = generateTreeTable(
+      ANALYSIS_INFO_TITLE,
+      this.config.properties,
+    );
     this.config.ui.write("");
     this.config.ui.write(output);
     this.config.ui.write("");
@@ -86,8 +93,13 @@ export class AnalyzerWrapper {
    * Validates that checker file exists
    */
   private validateCheckerFile(): void {
-    if (this.config.checkerPath != null && !existsSync(this.config.checkerPath)) {
-      this.config.ui.write(`\n${Sym.ERR} Checker file not found at ${this.config.checkerPath}`);
+    if (
+      this.config.checkerPath != null &&
+      !existsSync(this.config.checkerPath)
+    ) {
+      this.config.ui.write(
+        `\n${Sym.ERR} Checker file not found at ${this.config.checkerPath}`,
+      );
       process.exit(1);
     }
   }
@@ -103,13 +115,18 @@ export class AnalyzerWrapper {
     this.config.ui.setActionPrompt(`${Sym.WAIT} Compiling checker...`);
 
     try {
-      const bocCode = await compileFuncFileToBase64Boc(this.config.checkerPath, checkerFilename);
+      const bocCode = await compileFuncFileToBase64Boc(
+        this.config.checkerPath,
+        checkerFilename,
+      );
       const bocBuffer = Buffer.from(bocCode, "base64");
       this.tempBocPath = path.join(tmpdir(), `checker-${Date.now()}.boc`);
       writeFileSync(this.tempBocPath, bocBuffer);
     } catch (error) {
       this.config.ui.clearActionPrompt();
-      this.config.ui.write(`\n${Sym.ERR} Compilation failed: ${(error as Error).message}`);
+      this.config.ui.write(
+        `\n${Sym.ERR} Compilation failed: ${(error as Error).message}`,
+      );
       process.exit(1);
     }
   }
@@ -119,7 +136,10 @@ export class AnalyzerWrapper {
    */
   private writeCheckerCell(): void {
     const checkerCellBoc = this.config.checkerCell.toBoc();
-    this.tempCheckerCellPath = path.join(tmpdir(), `checker-cell-${Date.now()}.boc`);
+    this.tempCheckerCellPath = path.join(
+      tmpdir(),
+      `checker-cell-${Date.now()}.boc`,
+    );
     writeFileSync(this.tempCheckerCellPath, checkerCellBoc);
   }
 
@@ -160,7 +180,10 @@ export class AnalyzerWrapper {
    * @param checkerFilename - Name of the checker file to compile
    * @param buildArgs - Callback function to build analyzer arguments after compilation
    */
-  async run(checkerFilename: string | null, buildArgs: (wrapper: this) => string[]): Promise<void> {
+  async run(
+    checkerFilename: string | null,
+    buildArgs: (wrapper: this) => string[],
+  ): Promise<void> {
     this.printAnalysisInfo();
     this.validateCheckerFile();
     if (checkerFilename != null) {
@@ -241,7 +264,10 @@ export class AnalyzerWrapper {
       this.config.ui.write(line);
     }
 
-    const analysisInfo = generateTreeTable(ANALYSIS_INFO_TITLE, this.config.properties);
+    const analysisInfo = generateTreeTable(
+      ANALYSIS_INFO_TITLE,
+      this.config.properties,
+    );
     const report = analysisInfo + "\n\n" + reportLines.join("\n");
     writeFileSync(summaryPath, report);
   }
