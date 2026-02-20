@@ -1,11 +1,20 @@
 import { Argv } from "yargs";
 import yargs from "yargs";
 import { CommandContext, CommandHandler } from "../cli.js";
-import { OPCODE_INFO, Sym, ERROR_EXIT_CODE, OPCODE_AUTHORIZATION_CHECK_FILENAME } from "../common/constants.js";
+import {
+  OPCODE_INFO,
+  Sym,
+  ERROR_EXIT_CODE,
+  OPCODE_AUTHORIZATION_CHECK_FILENAME,
+} from "../common/constants.js";
 import { UIProvider } from "@ton/blueprint";
 import { extractOpcodes } from "../common/opcode-extractor.js";
 import { buildContracts } from "../common/build-utils.js";
-import { findCompiledContract, getSarifReportPath, getCheckerPath } from "../common/paths.js";
+import {
+  findCompiledContract,
+  getSarifReportPath,
+  getCheckerPath,
+} from "../common/paths.js";
 import { existsSync } from "fs";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 import { beginCell } from "@ton/core";

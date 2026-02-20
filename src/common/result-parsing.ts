@@ -1,5 +1,8 @@
 import { readFileSync } from "fs";
-import { EXPECTED_MESSAGE_IN_SARIF, EXPECTED_MESSAGE_NON_FAILING } from "./constants.js";
+import {
+  EXPECTED_MESSAGE_IN_SARIF,
+  EXPECTED_MESSAGE_NON_FAILING,
+} from "./constants.js";
 
 const findExecutionByMessage = (
   sarifPath: string,
