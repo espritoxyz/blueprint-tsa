@@ -1,8 +1,12 @@
 import { readFileSync } from "fs";
-import { EXPECTED_MESSAGE_IN_SARIF } from "./constants.js";
+import {
+  EXPECTED_MESSAGE_IN_SARIF,
+  EXPECTED_MESSAGE_NON_FAILING,
+} from "./constants.js";
 
-export const findExploitExecutionIndex = (
+const findExecutionByMessage = (
   sarifPath: string,
+  expectedMessage: string,
 ): number | undefined => {
   const sarifContent = readFileSync(sarifPath, "utf-8");
   const parsedObject = JSON.parse(sarifContent);
@@ -10,10 +14,22 @@ export const findExploitExecutionIndex = (
   const results = parsedObject.runs[0].results || [];
 
   const index = results.findIndex(
-    (result: any) => result.message?.text === EXPECTED_MESSAGE_IN_SARIF,
+    (result: any) => result.message?.text === expectedMessage,
   );
 
   return index >= 0 ? index : undefined;
+};
+
+export const findExploitExecutionIndex = (
+  sarifPath: string,
+): number | undefined => {
+  return findExecutionByMessage(sarifPath, EXPECTED_MESSAGE_IN_SARIF);
+};
+
+export const findNonFailingExecution = (
+  sarifPath: string,
+): number | undefined => {
+  return findExecutionByMessage(sarifPath, EXPECTED_MESSAGE_NON_FAILING);
 };
 
 export const getMessageValue = (
