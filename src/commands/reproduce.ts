@@ -1,5 +1,7 @@
 import { readFileSync } from "fs";
 import { Address, Cell } from "@ton/core";
+
+import arg from "arg";
 import {
   createNetworkProvider,
   NetworkProvider,
@@ -66,6 +68,14 @@ async function checkAddressContainsExpectedData(
   return contractState;
 }
 
+const argSpec = {
+  "--mainnet": Boolean,
+  "--testnet": Boolean,
+
+  "--tonscan": Boolean,
+  "--tonviewer": Boolean,
+};
+
 export const executeReproduceCommand = async (
   context: CommandContext,
   parsedArgs: any,
@@ -83,7 +93,10 @@ export const executeReproduceCommand = async (
     process.exit(1);
   }
   const configJson = configJsonResult.data;
-  const network = await createNetworkProvider(ui, { _: [] });
+  const network = await createNetworkProvider(
+    ui,
+    arg(argSpec, { argv: ["--tonviewer", "--testnet"] }),
+  );
 
   if (configJson.mode === DEPLOY_AND_REPRODUCE_COMMAND) {
     const codeHex = JSON.parse(readFileSync(configJson.codePath, "utf-8")).hex;
