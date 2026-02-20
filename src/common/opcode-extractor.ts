@@ -6,6 +6,9 @@ import { join } from "path";
 import { randomBytes } from "crypto";
 import { AnalyzerWrapper } from "./analyzer-wrapper.js";
 import { TreeProperty } from "./draw.js";
+import { formatOpcodeHex } from "./format-utils.js";
+
+const OPCODE_EXTRACTION_TIMEOUT_SECONDS = 20;
 
 export interface OpcodeExtractorConfig {
   ui: UIProvider;
@@ -24,6 +27,16 @@ export async function extractOpcodes(
   const properties: TreeProperty[] = [
     { key: "Contract", value: config.contractName },
     { key: "Mode", value: "Opcode extraction" },
+    {
+      key: "Options",
+      separator: true,
+      children: [
+        {
+          key: "Timeout",
+          value: `${OPCODE_EXTRACTION_TIMEOUT_SECONDS} seconds`,
+        },
+      ],
+    },
   ];
 
   // Create a temporary file for opcode output
@@ -40,7 +53,15 @@ export async function extractOpcodes(
     codePath: config.codePath,
   });
 
-  const args = ["opcodes", "--input", config.codePath, "--output", outputFile];
+  const args = [
+    "opcodes",
+    "--input",
+    config.codePath,
+    "--output",
+    outputFile,
+    "--timeout",
+    OPCODE_EXTRACTION_TIMEOUT_SECONDS.toString(),
+  ];
 
   try {
     await analyzer.run(null, () => args);
@@ -50,7 +71,7 @@ export async function extractOpcodes(
     const opcodes = content.split("\n").map((op) => parseInt(op.trim(), 10));
 
     config.ui.write(
-      `Extracted opcodes: [${opcodes.map((op) => `0x${op.toString(16).padStart(8, "0")}`).join(", ")}]`,
+      `Extracted opcodes: [${opcodes.map((op) => formatOpcodeHex(op)).join(", ")}]`,
     );
 
     return opcodes;

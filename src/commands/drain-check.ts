@@ -89,7 +89,6 @@ const drainCheckCommand: CommandHandler = async (
     });
   }
 
-  const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
   let timeout = parsedArgs.timeout ?? null;
 
   // If timeout wasn't provided, set it to 1 minute * (number_of_opcodes + 1)
@@ -100,6 +99,8 @@ const drainCheckCommand: CommandHandler = async (
       "The timeout was calculated automatically based on the number of opcodes.",
     );
   }
+
+  const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
     { key: "Contract", value: contract },

@@ -23,8 +23,13 @@ export const OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME = "owner-hijack-symbolic.fc";
 export const OWNER_HIJACK_CHECK_CONCRETE_FILENAME = "owner-hijack-concrete.fc";
 export const OWNER_HIJACK_CHECK_ID = "owner-hijack";
 
+export const OPCODE_INFO = "opcode-info";
+export const OPCODE_AUTHORIZATION_CHECK_FILENAME = "authorization-check.fc";
+
 export const ERROR_EXIT_CODE = 1000;
+export const NON_FAILING_EXIT_CODE = 1001;
 export const EXPECTED_MESSAGE_IN_SARIF = `TvmFailure(exit=TVM user defined error with exit code ${ERROR_EXIT_CODE}, phase=TvmComputePhase)`;
+export const EXPECTED_MESSAGE_NON_FAILING = `TvmFailure(exit=TVM user defined error with exit code ${NON_FAILING_EXIT_CODE}, phase=TvmComputePhase)`;
 
 export const ANALYSIS_INFO_TITLE = "TSA analysis";
 

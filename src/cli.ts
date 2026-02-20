@@ -5,6 +5,7 @@ import { configureCleanCommand } from "./commands/clean.js";
 import { configureOwnerHijackCommand } from "./commands/owner-hijack-check.js";
 import { configureReproduceCommand } from "./commands/reproduce.js";
 import { configureReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
+import { configureOpcodeInfoCommand } from "./commands/opcode-info.js";
 
 export interface CommandContext {
   ui: UIProvider;
@@ -31,6 +32,7 @@ export const createCLI = (context: CommandContext) => {
   const cleanConfig = configureCleanCommand();
   const reproduceCommand = configureReproduceCommand(context);
   const ownerHijackConfig = configureOwnerHijackCommand(context);
+  const opcodeInfoConfig = configureOpcodeInfoCommand(context);
 
   return yargs(argv)
     .scriptName("tsa")
@@ -63,6 +65,12 @@ export const createCLI = (context: CommandContext) => {
       reproduceCommand.description,
       reproduceCommand.builder,
       reproduceCommand.handler,
+    )
+    .command(
+      opcodeInfoConfig.command,
+      opcodeInfoConfig.description,
+      opcodeInfoConfig.builder,
+      opcodeInfoConfig.handler,
     )
     .demandCommand(1, "Please specify a subcommand")
     .help()

@@ -205,6 +205,10 @@ export class AnalyzerWrapper {
       this.config.ui.clearActionPrompt();
       this.config.ui.write(`${Sym.OK} Analysis complete.`);
       this.config.ui.write(`TSA run log available at: ${logPath}`);
+
+      if (result.stdout.trim().length > 0) {
+        this.config.ui.write(`${Sym.WARN} Log file is not empty.`);
+      }
     } finally {
       this.cleanup();
     }
@@ -233,6 +237,12 @@ export class AnalyzerWrapper {
       executionIndex: index,
       msgBody,
     };
+  }
+
+  vulnerabilityIsPresent(): boolean {
+    const sarifPath = getSarifReportPath(this.id);
+    const index = findExploitExecutionIndex(sarifPath);
+    return index !== undefined;
   }
 
   reportVulnerability(vulnerability: VulnerabilityDescription | null) {

@@ -1,0 +1,37 @@
+#include "imports/stdlib.fc";
+#include "imports/tsa_functions.fc";
+
+global int opcode;
+global slice initial_sender;
+
+() on_internal_message_send(int balance, int msg_value, cell in_msg_full, slice msg_body, int input_id) impure method_id {
+    slice cs = in_msg_full.begin_parse();
+    cs~load_uint(4); ;; flags
+    initial_sender = cs~load_msg_addr(); ;; src
+    slice contract_address = cs~load_msg_addr(); ;; dst
+    cs~load_coins(); ;; value
+
+    int cur_opcode = msg_body~load_uint(32);
+    tsa_assert(cur_opcode == opcode);
+
+    cell c4 = tsa_get_c4(1);
+    tsa_make_slice_independent_from_random_addresses(c4.begin_parse());
+    tsa_make_slice_independent_from_random_addresses(contract_address);
+}
+
+() main() impure {
+    tsa_forbid_failures();
+
+    slice ds = get_data().begin_parse();
+    opcode = ds~load_uint(32);
+
+    tsa_send_internal_message(1, 0);
+
+    tsa_allow_failures();
+
+    int random_sender = tsa_mk_int(1, -1);
+    throw_if(1001, ~ random_sender);
+
+    tsa_make_address_random(initial_sender);
+    throw(1000);
+}
