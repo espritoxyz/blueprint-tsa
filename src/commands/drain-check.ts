@@ -2,6 +2,7 @@ import path from "path";
 import yargs, { Argv } from "yargs";
 import { existsSync } from "fs";
 import { beginCell, toNano } from "@ton/core";
+import { UIProvider } from "@ton/blueprint";
 import { TreeProperty } from "../common/draw.js";
 import { CommandHandler, CommandContext } from "../cli.js";
 import { ReproduceParameters } from "../reproduce/network.js";
@@ -61,49 +62,28 @@ export const configureDrainCheckCommand = (context: CommandContext) => {
   };
 };
 
-const drainCheckCommand: CommandHandler = async (
-  context: CommandContext,
-  parsedArgs: any,
-) => {
-  const { ui } = context;
-
-  await buildContracts(ui);
-
-  if (!parsedArgs.contract) {
-    throw new Error("Contract name or path is required");
-  }
-  const contract = parsedArgs.contract;
-  const contractPath = findCompiledContract(contract);
-
-  if (!existsSync(contractPath)) {
-    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
-    process.exit(1);
-  }
-
-  let opcodes: number[] = [];
-  if (!parsedArgs["disable-opcode-extraction"]) {
-    opcodes = await extractOpcodes({
-      ui,
-      codePath: contractPath,
-      contractName: contract,
-    });
-  }
-
-  let timeout = parsedArgs.timeout ?? null;
-
-  // If timeout wasn't provided, set it to 1 minute * (number_of_opcodes + 1)
-  if (timeout === null && opcodes.length > 0) {
-    timeout = ONE_MINUTE_SECONDS * (opcodes.length + 1);
-    ui.write("");
-    ui.write(
-      "The timeout was calculated automatically based on the number of opcodes.",
-    );
-  }
-
+/**
+ * Runs drain check analysis and returns the analyzer wrapper
+ * @param contractName - Name of the contract
+ * @param contractPath - Path to the compiled contract
+ * @param ui - UI provider
+ * @param timeout - Analysis timeout in seconds
+ * @param opcodes - List of opcodes to analyze
+ * @param verbose - Enable verbose output
+ * @returns AnalyzerWrapper instance
+ */
+export const runDrainCheckAnalysis = async (
+  contractName: string,
+  contractPath: string,
+  ui: UIProvider,
+  timeout: number | null,
+  opcodes: number[],
+  verbose: boolean = false,
+): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
-    { key: "Contract", value: contract },
+    { key: "Contract", value: contractName },
     { key: "Mode", value: "TON drain" },
     {
       key: "Options",
@@ -145,9 +125,60 @@ const drainCheckCommand: CommandHandler = async (
     ...(timeout != null ? ["--timeout", timeout.toString()] : []),
     "--exported-inputs",
     reportDir,
-    ...(parsedArgs.verbose ? ["-v"] : []),
+    ...(verbose ? ["-v"] : []),
     ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
   ]);
+
+  return analyzer;
+};
+
+const drainCheckCommand: CommandHandler = async (
+  context: CommandContext,
+  parsedArgs: any,
+) => {
+  const { ui } = context;
+
+  await buildContracts(ui);
+
+  if (!parsedArgs.contract) {
+    throw new Error("Contract name or path is required");
+  }
+  const contract = parsedArgs.contract;
+  const contractPath = findCompiledContract(contract);
+
+  if (!existsSync(contractPath)) {
+    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
+    process.exit(1);
+  }
+
+  let opcodes: number[] = [];
+  if (!parsedArgs["disable-opcode-extraction"]) {
+    opcodes = await extractOpcodes({
+      ui,
+      codePath: contractPath,
+      contractName: contract,
+    });
+  }
+
+  let timeout = parsedArgs.timeout ?? null;
+
+  // If timeout wasn't provided, set it to 1 minute * (number_of_opcodes + 1)
+  if (timeout === null && opcodes.length > 0) {
+    timeout = ONE_MINUTE_SECONDS * (opcodes.length + 1);
+    ui.write("");
+    ui.write(
+      "The timeout was calculated automatically based on the number of opcodes.",
+    );
+  }
+
+  const analyzer = await runDrainCheckAnalysis(
+    contract,
+    contractPath,
+    ui,
+    timeout,
+    opcodes,
+    parsedArgs.verbose,
+  );
 
   const vulnerability = analyzer.getVulnerability();
   analyzer.reportVulnerability(vulnerability);
