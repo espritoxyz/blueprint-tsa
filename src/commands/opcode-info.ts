@@ -1,5 +1,6 @@
 import { Argv } from "yargs";
 import yargs from "yargs";
+import path from "path";
 import { CommandContext, CommandHandler } from "../cli.js";
 import {
   OPCODE_INFO,
@@ -14,6 +15,8 @@ import {
   findCompiledContract,
   getSarifReportPath,
   getCheckerPath,
+  getReportDirectory,
+  getInputsPath,
 } from "../common/paths.js";
 import { existsSync } from "fs";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
@@ -22,9 +25,10 @@ import { TreeProperty } from "../common/draw.js";
 import { formatOpcodeHex } from "../common/format-utils.js";
 import { findNonFailingExecution } from "../common/result-parsing.js";
 
-interface OpcodeInfo {
+export interface OpcodeInfo {
   opcode: number;
   withAuthorization: boolean;
+  vulnerabilityPath?: string;
 }
 
 export async function runOpcodeAuthorizationCheckAnalysis(
@@ -33,7 +37,9 @@ export async function runOpcodeAuthorizationCheckAnalysis(
   contractPath: string,
   ui: UIProvider,
   timeout: number | null,
-): Promise<AnalyzerWrapper> {
+  completionMessage: string = "Analysis complete.",
+  verbose: boolean = false,
+): Promise<OpcodeInfo | null> {
   const properties: TreeProperty[] = [
     { key: "Contract", value: contractName },
     { key: "Mode", value: "Opcode Authorization Check" },
@@ -66,41 +72,29 @@ export async function runOpcodeAuthorizationCheckAnalysis(
 
   const sarifPath = getSarifReportPath(analyzer.id);
 
-  await analyzer.run(OPCODE_AUTHORIZATION_CHECK_FILENAME, (wrapper) => [
-    "custom-checker-compiled",
-    "--checker",
-    wrapper.getTempBocPath(),
-    "--contract",
-    contractPath,
-    "--stop-when-exit-codes-found",
-    ERROR_EXIT_CODE.toString(),
-    "--checker-data",
-    wrapper.getTempCheckerCellPath(),
-    "--output",
-    sarifPath,
-    ...(timeout != null ? ["--timeout", timeout.toString()] : []),
-    "--disable-out-message-analysis",
-  ]);
-
-  return analyzer;
-}
-
-async function extractOpcodeInfo(
-  opcode: number,
-  contractName: string,
-  contractPath: string,
-  ui: UIProvider,
-  timeout: number | null,
-): Promise<OpcodeInfo | null> {
-  const analyzer = await runOpcodeAuthorizationCheckAnalysis(
-    opcode,
-    contractName,
-    contractPath,
-    ui,
-    timeout,
+  await analyzer.run(
+    OPCODE_AUTHORIZATION_CHECK_FILENAME,
+    (wrapper) => [
+      "custom-checker-compiled",
+      "--checker",
+      wrapper.getTempBocPath(),
+      "--contract",
+      contractPath,
+      "--stop-when-exit-codes-found",
+      ERROR_EXIT_CODE.toString(),
+      "--checker-data",
+      wrapper.getTempCheckerCellPath(),
+      "--output",
+      sarifPath,
+      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
+      "--disable-out-message-analysis",
+      "--exported-inputs",
+      getReportDirectory(wrapper.id),
+      ...(verbose ? ["-v"] : []),
+    ],
+    completionMessage,
   );
 
-  const sarifPath = getSarifReportPath(analyzer.id);
   const vulnerability = analyzer.vulnerabilityIsPresent();
   const nonFailingExecutionIndex = findNonFailingExecution(sarifPath);
 
@@ -109,11 +103,38 @@ async function extractOpcodeInfo(
   }
 
   const withAuthorization = !vulnerability;
+  let vulnerabilityPath: string | undefined;
+  if (vulnerability) {
+    const vulnDesc = analyzer.getVulnerability();
+    if (vulnDesc) {
+      vulnerabilityPath = getInputsPath(analyzer.id, vulnDesc.executionIndex);
+    }
+  }
 
   return {
     opcode,
     withAuthorization,
+    vulnerabilityPath,
   };
+}
+
+async function extractOpcodeInfo(
+  opcode: number,
+  contractName: string,
+  contractPath: string,
+  ui: UIProvider,
+  timeout: number | null,
+  verbose: boolean,
+): Promise<OpcodeInfo | null> {
+  return runOpcodeAuthorizationCheckAnalysis(
+    opcode,
+    contractName,
+    contractPath,
+    ui,
+    timeout,
+    "Analysis complete.",
+    verbose,
+  );
 }
 
 async function getAllOpcodeInfo(
@@ -122,6 +143,7 @@ async function getAllOpcodeInfo(
   contractPath: string,
   ui: UIProvider,
   timeout: number | null,
+  verbose: boolean,
 ): Promise<OpcodeInfo[]> {
   const results: OpcodeInfo[] = [];
   for (const opcode of opcodes) {
@@ -131,6 +153,7 @@ async function getAllOpcodeInfo(
       contractPath,
       ui,
       timeout,
+      verbose,
     );
     if (info !== null) {
       results.push(info);
@@ -139,12 +162,12 @@ async function getAllOpcodeInfo(
   return results;
 }
 
-function formatOpcodeInfo(infos: OpcodeInfo[]): string {
+export function formatOpcodeInfo(infos: OpcodeInfo[]): string {
   if (infos.length === 0) {
     return "No opcodes to analyze.";
   }
 
-  const lines: string[] = ["\nOpcode Authorization Analysis:", ""];
+  const lines: string[] = ["Opcode Authorization Analysis:", ""];
 
   for (const info of infos) {
     const opcodeHex = formatOpcodeHex(info.opcode);
@@ -152,6 +175,14 @@ function formatOpcodeInfo(infos: OpcodeInfo[]): string {
       ? `${Sym.OK} Has authorization checks`
       : `${Sym.WARN} No authorization checks`;
     lines.push(`${opcodeHex}: ${authStatus}`);
+
+    // If authorization is missing and vulnerability path is available, show it
+    if (!info.withAuthorization && info.vulnerabilityPath) {
+      const relativePath = path.relative(process.cwd(), info.vulnerabilityPath);
+      lines.push(`  Path to reproducing input: ${relativePath}`);
+    }
+
+    lines.push("");
   }
 
   lines.push("");
@@ -163,7 +194,7 @@ const opcodeInfoHandler: CommandHandler = async (
   args: yargs.ArgumentsCamelCase,
 ) => {
   const { ui } = context;
-  const { timeout, contract } = args;
+  const { timeout, contract, verbose } = args;
 
   await buildContracts(ui);
   const codePath = findCompiledContract(contract as string);
@@ -184,7 +215,10 @@ const opcodeInfoHandler: CommandHandler = async (
     codePath,
     ui,
     (timeout as number) ?? null,
+    verbose as boolean,
   );
+
+  ui.write("");
   const output = formatOpcodeInfo(infos);
   ui.write(output);
 };
@@ -206,6 +240,11 @@ export const configureOpcodeInfoCommand = (context: CommandContext) => {
           type: "number",
           description: "Timeout in seconds for analyzing one opcode",
           default: 60,
+        })
+        .option("verbose", {
+          alias: "v",
+          type: "boolean",
+          description: "Use debug output in TSA log",
         }),
     handler: async (argv: yargs.ArgumentsCamelCase) => {
       await opcodeInfoHandler(context, argv);

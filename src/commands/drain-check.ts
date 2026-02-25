@@ -1,4 +1,3 @@
-import path from "path";
 import yargs, { Argv } from "yargs";
 import { existsSync } from "fs";
 import { beginCell, toNano } from "@ton/core";
@@ -17,13 +16,15 @@ import {
   ERROR_EXIT_CODE,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
-import { printCleanupInstructions } from "../reproduce/utils.js";
+import {
+  printCleanupInstructions,
+  printReproductionInstructions,
+} from "../reproduce/utils.js";
 import {
   findCompiledContract,
   getCheckerPath,
   getSarifReportPath,
   getReportDirectory,
-  getReproduceConfigPath,
 } from "../common/paths.js";
 import { extractOpcodes } from "../common/opcode-extractor.js";
 
@@ -79,6 +80,7 @@ export const runDrainCheckAnalysis = async (
   timeout: number | null,
   opcodes: number[],
   verbose: boolean = false,
+  completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
 
@@ -110,24 +112,36 @@ export const runDrainCheckAnalysis = async (
   const reportDir = getReportDirectory(analyzer.id);
   const sarifPath = getSarifReportPath(analyzer.id);
 
-  await analyzer.run(DRAIN_CHECK_SYMBOLIC_FILENAME, (wrapper) => [
-    "custom-checker-compiled",
-    "--checker",
-    wrapper.getTempBocPath(),
-    "--contract",
-    contractPath,
-    "--stop-when-exit-codes-found",
-    ERROR_EXIT_CODE.toString(),
-    "--checker-data",
-    wrapper.getTempCheckerCellPath(),
-    "--output",
-    sarifPath,
-    ...(timeout != null ? ["--timeout", timeout.toString()] : []),
-    "--exported-inputs",
-    reportDir,
-    ...(verbose ? ["-v"] : []),
-    ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
-  ]);
+  await analyzer.run(
+    DRAIN_CHECK_SYMBOLIC_FILENAME,
+    (wrapper) => [
+      "custom-checker-compiled",
+      "--checker",
+      wrapper.getTempBocPath(),
+      "--contract",
+      contractPath,
+      "--stop-when-exit-codes-found",
+      ERROR_EXIT_CODE.toString(),
+      "--checker-data",
+      wrapper.getTempCheckerCellPath(),
+      "--output",
+      sarifPath,
+      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
+      "--exported-inputs",
+      reportDir,
+      ...(verbose ? ["-v"] : []),
+      ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
+    ],
+    completionMessage,
+  );
+
+  // Write reproduction config if vulnerability is found
+  const vulnerability = analyzer.getVulnerability();
+  if (vulnerability) {
+    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {
+      kind: DRAIN_CHECK_ID,
+    });
+  }
 
   return analyzer;
 };
@@ -186,13 +200,7 @@ const drainCheckCommand: CommandHandler = async (
   printCleanupInstructions(ui);
 
   if (vulnerability != null) {
-    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {
-      kind: DRAIN_CHECK_ID,
-    });
-    const configPath = getReproduceConfigPath(analyzer.id);
-    const relativeConfigPath = path.relative(process.cwd(), configPath);
-    ui.write("To reproduce the vulnerability on the blockchain, run:");
-    ui.write(`> yarn blueprint tsa reproduce --config ${relativeConfigPath}`);
+    printReproductionInstructions(ui, analyzer.id);
 
     process.exit(2);
   }
@@ -200,6 +208,7 @@ const drainCheckCommand: CommandHandler = async (
 
 export const drainCheckConcrete = async (
   config: ConcreteAnalysisConfig,
+  completionMessage: string = "Analysis complete.",
 ): Promise<ReproduceParameters | null> => {
   const { ui } = config;
 
@@ -244,28 +253,34 @@ export const drainCheckConcrete = async (
     codePath: config.codePath,
   });
 
-  await analyzer.run(DRAIN_CHECK_CONCRETE_FILENAME, (wrapper) => [
-    "custom-checker-compiled",
-    "--checker",
-    wrapper.getTempBocPath(),
-    "--contract",
-    config.codePath,
-    "--data",
-    config.dataPath,
-    "--balance",
-    config.balance.toString(),
-    "--address",
-    config.contractAddress.toRawString(),
-    "--stop-when-exit-codes-found",
-    ERROR_EXIT_CODE.toString(),
-    "--checker-data",
-    wrapper.getTempCheckerCellPath(),
-    "--output",
-    getSarifReportPath(wrapper.id),
-    "--exported-inputs",
-    getReportDirectory(wrapper.id),
-    ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
-  ]);
+  await analyzer.run(
+    DRAIN_CHECK_CONCRETE_FILENAME,
+    (wrapper) => [
+      "custom-checker-compiled",
+      "--checker",
+      wrapper.getTempBocPath(),
+      "--contract",
+      config.codePath,
+      "--data",
+      config.dataPath,
+      "--balance",
+      config.balance.toString(),
+      "--address",
+      config.contractAddress.toRawString(),
+      "--stop-when-exit-codes-found",
+      ERROR_EXIT_CODE.toString(),
+      "--checker-data",
+      wrapper.getTempCheckerCellPath(),
+      "--output",
+      getSarifReportPath(wrapper.id),
+      "--exported-inputs",
+      getReportDirectory(wrapper.id),
+      ...(config.timeout != null
+        ? ["--timeout", config.timeout.toString()]
+        : []),
+    ],
+    completionMessage,
+  );
 
   const vulnerability = analyzer.getVulnerability();
   if (vulnerability == null) {

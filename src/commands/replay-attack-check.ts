@@ -65,6 +65,7 @@ export const runReplayAttackCheckAnalysis = async (
   ui: UIProvider,
   timeout: number | null,
   verbose: boolean = false,
+  completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME);
 
@@ -96,24 +97,28 @@ export const runReplayAttackCheckAnalysis = async (
   const reportDir = getReportDirectory(analyzer.id);
   const sarifPath = getSarifReportPath(analyzer.id);
 
-  await analyzer.run(REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME, (wrapper) => [
-    "custom-checker-compiled",
-    "--checker",
-    wrapper.getTempBocPath(),
-    "--contract",
-    contractPath,
-    "--stop-when-exit-codes-found",
-    ERROR_EXIT_CODE.toString(),
-    "--checker-data",
-    wrapper.getTempCheckerCellPath(),
-    "--output",
-    sarifPath,
-    ...(timeout != null ? ["--timeout", timeout.toString()] : []),
-    "--exported-inputs",
-    reportDir,
-    ...(verbose ? ["-v"] : []),
-    "--disable-out-message-analysis",
-  ]);
+  await analyzer.run(
+    REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME,
+    (wrapper) => [
+      "custom-checker-compiled",
+      "--checker",
+      wrapper.getTempBocPath(),
+      "--contract",
+      contractPath,
+      "--stop-when-exit-codes-found",
+      ERROR_EXIT_CODE.toString(),
+      "--checker-data",
+      wrapper.getTempCheckerCellPath(),
+      "--output",
+      sarifPath,
+      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
+      "--exported-inputs",
+      reportDir,
+      ...(verbose ? ["-v"] : []),
+      "--disable-out-message-analysis",
+    ],
+    completionMessage,
+  );
 
   return analyzer;
 };
