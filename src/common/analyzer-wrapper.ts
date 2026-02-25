@@ -170,6 +170,7 @@ export class AnalyzerWrapper {
   async run(
     checkerFilename: string | null,
     buildArgs: (wrapper: this) => string[],
+    completionMessage: string = "Analysis complete.",
   ): Promise<void> {
     this.printAnalysisInfo();
     this.validateCheckerFile();
@@ -190,7 +191,7 @@ export class AnalyzerWrapper {
       writeFileSync(logPath, result.stdout);
 
       this.config.ui.clearActionPrompt();
-      this.config.ui.write(`${Sym.OK} Analysis complete.`);
+      this.config.ui.write(`${Sym.OK} ${completionMessage}`);
       this.config.ui.write(`TSA run log available at: ${logPath}`);
 
       if (result.stdout.trim().length > 0) {

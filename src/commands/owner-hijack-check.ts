@@ -1,4 +1,3 @@
-import path from "path";
 import { Argv } from "yargs";
 import { existsSync } from "fs";
 import { beginCell, getMethodId, toNano } from "@ton/core";
@@ -14,12 +13,14 @@ import {
   Sym,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
-import { printCleanupInstructions, printReproductionInstructions } from "../reproduce/utils.js";
+import {
+  printCleanupInstructions,
+  printReproductionInstructions,
+} from "../reproduce/utils.js";
 import {
   findCompiledContract,
   getCheckerPath,
   getReportDirectory,
-  getReproduceConfigPath,
   getSarifReportPath,
 } from "../common/paths.js";
 import { UIProvider } from "@ton/blueprint";
@@ -123,6 +124,7 @@ export const runOwnerHijackCheckAnalysis = async (
   methodId: bigint,
   opcodes: number[],
   verbose: boolean = false,
+  completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
   const properties: TreeProperty[] = [
     { key: "Contract", value: contractName },
@@ -153,25 +155,29 @@ export const runOwnerHijackCheckAnalysis = async (
   const reportDir = getReportDirectory(analyzer.id);
   const sarifPath = getSarifReportPath(analyzer.id);
 
-  await analyzer.run(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME, (wrapper) => [
-    "custom-checker-compiled",
-    "--checker",
-    wrapper.getTempBocPath(),
-    "--contract",
-    contractPath,
-    "--stop-when-exit-codes-found",
-    ERROR_EXIT_CODE.toString(),
-    "--checker-data",
-    wrapper.getTempCheckerCellPath(),
-    "--output",
-    sarifPath,
-    "--exported-inputs",
-    reportDir,
-    ...(verbose ? ["-v"] : []),
-    ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
-    "--disable-out-message-analysis",
-    ...(timeout != null ? ["--timeout", timeout.toString()] : []),
-  ]);
+  await analyzer.run(
+    OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME,
+    (wrapper) => [
+      "custom-checker-compiled",
+      "--checker",
+      wrapper.getTempBocPath(),
+      "--contract",
+      contractPath,
+      "--stop-when-exit-codes-found",
+      ERROR_EXIT_CODE.toString(),
+      "--checker-data",
+      wrapper.getTempCheckerCellPath(),
+      "--output",
+      sarifPath,
+      "--exported-inputs",
+      reportDir,
+      ...(verbose ? ["-v"] : []),
+      ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
+      "--disable-out-message-analysis",
+      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
+    ],
+    completionMessage,
+  );
 
   // Write reproduction config if vulnerability is found
   const vulnerability = analyzer.getVulnerability();
@@ -274,6 +280,7 @@ const readNanotons = async (
 export const ownerHijackCheckConcrete = async (
   config: ConcreteAnalysisConfig,
   concreteCheckerOptions: OwnerHijackOptions,
+  completionMessage: string = "Analysis complete.",
 ): Promise<ReproduceParameters | null> => {
   const { ui } = config;
 
@@ -339,30 +346,36 @@ export const ownerHijackCheckConcrete = async (
     codePath: config.codePath,
   });
 
-  await analyzer.run(OWNER_HIJACK_CHECK_CONCRETE_FILENAME, (wrapper) => [
-    "custom-checker-compiled",
-    "--checker",
-    wrapper.getTempBocPath(),
-    "--contract",
-    config.codePath,
-    "--data",
-    config.dataPath,
-    "--balance",
-    config.balance.toString(),
-    "--address",
-    config.contractAddress.toRawString(),
-    "--stop-when-exit-codes-found",
-    ERROR_EXIT_CODE.toString(),
-    "--checker-data",
-    wrapper.getTempCheckerCellPath(),
-    "--output",
-    getSarifReportPath(wrapper.id),
-    "--disable-out-message-analysis",
-    "--exported-inputs",
-    getReportDirectory(wrapper.id),
-    ...(config.timeout != null ? ["--timeout", config.timeout.toString()] : []),
-    "-v",
-  ]);
+  await analyzer.run(
+    OWNER_HIJACK_CHECK_CONCRETE_FILENAME,
+    (wrapper) => [
+      "custom-checker-compiled",
+      "--checker",
+      wrapper.getTempBocPath(),
+      "--contract",
+      config.codePath,
+      "--data",
+      config.dataPath,
+      "--balance",
+      config.balance.toString(),
+      "--address",
+      config.contractAddress.toRawString(),
+      "--stop-when-exit-codes-found",
+      ERROR_EXIT_CODE.toString(),
+      "--checker-data",
+      wrapper.getTempCheckerCellPath(),
+      "--output",
+      getSarifReportPath(wrapper.id),
+      "--disable-out-message-analysis",
+      "--exported-inputs",
+      getReportDirectory(wrapper.id),
+      ...(config.timeout != null
+        ? ["--timeout", config.timeout.toString()]
+        : []),
+      "-v",
+    ],
+    completionMessage,
+  );
 
   const vulnerability = analyzer.getVulnerability();
   if (vulnerability == null) {

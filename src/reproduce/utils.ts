@@ -3,7 +3,8 @@ import path from "path";
 import { existsSync } from "fs";
 import { getReproduceConfigPath } from "../common/paths.js";
 
-const REPRODUCE_INSTRUCTION_HEADER = "To reproduce the vulnerability on the blockchain, run:";
+const REPRODUCE_INSTRUCTION_HEADER =
+  "To reproduce the vulnerability on the blockchain, run:";
 const REPRODUCE_COMMAND_PREFIX = "> yarn blueprint tsa reproduce --config";
 
 export const printCleanupInstructions = (ui: UIProvider): void => {

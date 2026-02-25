@@ -18,17 +18,23 @@ import {
   findCompiledContract,
   findTSAReportsDirectory,
   getInputsPath,
-  getReproduceConfigPath,
 } from "../common/paths.js";
-import { generateReportId } from "../common/format-utils.js";
+import { generateReportId, formatOpcodeHex } from "../common/format-utils.js";
 import { extractOpcodes } from "../common/opcode-extractor.js";
 import { UIProvider } from "@ton/blueprint";
 import { getMethodId } from "@ton/core";
-import { printCleanupInstructions, printReproductionInstructions, getReproductionInstructions } from "../reproduce/utils.js";
+import {
+  printCleanupInstructions,
+  getReproductionInstructions,
+} from "../reproduce/utils.js";
 import { runDrainCheckAnalysis } from "./drain-check.js";
 import { runReplayAttackCheckAnalysis } from "./replay-attack-check.js";
 import { runOwnerHijackCheckAnalysis } from "./owner-hijack-check.js";
-import { runOpcodeAuthorizationCheckAnalysis, formatOpcodeInfo, OpcodeInfo } from "./opcode-info.js";
+import {
+  runOpcodeAuthorizationCheckAnalysis,
+  formatOpcodeInfo,
+  OpcodeInfo,
+} from "./opcode-info.js";
 
 const ONE_MINUTE_SECONDS = 60;
 
@@ -92,13 +98,21 @@ function buildCheckResult(
     name: checkName,
     passed: !vulnerability,
     message: vulnerability ? failedMessage : passedMessage,
-    checkCommand: getCheckCommand(checkName, contractName, timeout, ownerMethod),
+    checkCommand: getCheckCommand(
+      checkName,
+      contractName,
+      timeout,
+      ownerMethod,
+    ),
   };
 
   if (vulnerability) {
     const vulnDesc = analyzer.getVulnerability();
     if (vulnDesc) {
-      result.vulnerabilityPath = getInputsPath(analyzer.id, vulnDesc.executionIndex);
+      result.vulnerabilityPath = getInputsPath(
+        analyzer.id,
+        vulnDesc.executionIndex,
+      );
       result.analyzerId = analyzer.id;
     }
   }
@@ -112,6 +126,7 @@ async function runOpcodeInfoCheck(
   ui: UIProvider,
   timeout: number | null,
   opcodes: number[],
+  verbose: boolean,
 ): Promise<OpcodeInfo[]> {
   // Calculate timeout per opcode
   let opcodeTimeout: number | null = null;
@@ -131,6 +146,8 @@ async function runOpcodeInfoCheck(
       contractPath,
       ui,
       opcodeTimeout,
+      `Authorization check for ${formatOpcodeHex(opcode)} completed.`,
+      verbose,
     );
 
     if (info !== null) {
@@ -147,6 +164,7 @@ async function runDrainCheck(
   ui: UIProvider,
   timeout: number | null,
   opcodes: number[],
+  verbose: boolean,
 ): Promise<CheckResult> {
   const analyzer = await runDrainCheckAnalysis(
     contractName,
@@ -154,7 +172,8 @@ async function runDrainCheck(
     ui,
     timeout,
     opcodes,
-    false,
+    verbose,
+    `${DRAIN_CHECK_NAME} completed.`,
   );
 
   return buildCheckResult(
@@ -172,13 +191,15 @@ async function runReplayAttackCheck(
   contractPath: string,
   ui: UIProvider,
   timeout: number | null,
+  verbose: boolean,
 ): Promise<CheckResult> {
   const analyzer = await runReplayAttackCheckAnalysis(
     contractName,
     contractPath,
     ui,
     timeout,
-    false,
+    verbose,
+    `${REPLAY_ATTACK_CHECK_NAME} completed.`,
   );
 
   return buildCheckResult(
@@ -198,6 +219,7 @@ async function runOwnerHijackCheck(
   timeout: number | null,
   methodName: string,
   opcodes: number[],
+  verbose: boolean,
 ): Promise<CheckResult> {
   const methodId = BigInt(getMethodId(methodName));
 
@@ -208,7 +230,8 @@ async function runOwnerHijackCheck(
     timeout,
     methodId,
     opcodes,
-    false,
+    verbose,
+    `${OWNER_HIJACK_CHECK_NAME} completed.`,
   );
 
   return buildCheckResult(
@@ -245,7 +268,10 @@ function buildAuditReport(summary: AuditSummary): string {
     const status = check.passed ? Sym.OK : Sym.ERR;
     lines.push(`  ${status} ${check.name}: ${check.message}`);
     if (check.vulnerabilityPath) {
-      const relativePath = path.relative(process.cwd(), check.vulnerabilityPath);
+      const relativePath = path.relative(
+        process.cwd(),
+        check.vulnerabilityPath,
+      );
       lines.push(`     Path to reproducing input: ${relativePath}`);
     }
     lines.push("");
@@ -273,7 +299,6 @@ function buildAuditReport(summary: AuditSummary): string {
       vulnerabilityInstructions.push("─".repeat(60));
       vulnerabilityInstructions.push(`  ${check.name}`);
       vulnerabilityInstructions.push("─".repeat(60));
-      vulnerabilityInstructions.push("");
       vulnerabilityInstructions.push("To run only this check, use:");
       vulnerabilityInstructions.push(`> ${check.checkCommand}`);
       vulnerabilityInstructions.push("");
@@ -317,7 +342,8 @@ const auditHandler: CommandHandler = async (
   args: yargs.ArgumentsCamelCase,
 ) => {
   const { ui } = context;
-  const { timeout, contract, ownerMethod, disableOpcodeExtraction } = args;
+  const { timeout, contract, ownerMethod, disableOpcodeExtraction, verbose } =
+    args;
 
   await buildContracts(ui);
   const contractPath = findCompiledContract(contract as string);
@@ -363,6 +389,7 @@ const auditHandler: CommandHandler = async (
     ui,
     effectiveTimeout,
     opcodes,
+    verbose as boolean,
   );
 
   // Run drain-check
@@ -374,6 +401,7 @@ const auditHandler: CommandHandler = async (
     ui,
     effectiveTimeout,
     opcodes,
+    verbose as boolean,
   );
   summary.checks.push(drainResult);
 
@@ -385,6 +413,7 @@ const auditHandler: CommandHandler = async (
     contractPath,
     ui,
     effectiveTimeout,
+    verbose as boolean,
   );
   summary.checks.push(replayResult);
 
@@ -399,6 +428,7 @@ const auditHandler: CommandHandler = async (
       effectiveTimeout,
       ownerMethod as string,
       opcodes,
+      verbose as boolean,
     );
     summary.checks.push(ownerResult);
   } else {
@@ -445,6 +475,11 @@ export const configureAuditCommand = (context: CommandContext) => {
           type: "boolean",
           description:
             "Disable opcode extraction. This affects path selection strategy and default timeout.",
+        })
+        .option("verbose", {
+          alias: "v",
+          type: "boolean",
+          description: "Use debug output in TSA log",
         }),
     handler: async (argv: yargs.ArgumentsCamelCase) => {
       await auditHandler(context, argv);

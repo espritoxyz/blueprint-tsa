@@ -37,6 +37,8 @@ export async function runOpcodeAuthorizationCheckAnalysis(
   contractPath: string,
   ui: UIProvider,
   timeout: number | null,
+  completionMessage: string = "Analysis complete.",
+  verbose: boolean = false,
 ): Promise<OpcodeInfo | null> {
   const properties: TreeProperty[] = [
     { key: "Contract", value: contractName },
@@ -70,23 +72,28 @@ export async function runOpcodeAuthorizationCheckAnalysis(
 
   const sarifPath = getSarifReportPath(analyzer.id);
 
-  await analyzer.run(OPCODE_AUTHORIZATION_CHECK_FILENAME, (wrapper) => [
-    "custom-checker-compiled",
-    "--checker",
-    wrapper.getTempBocPath(),
-    "--contract",
-    contractPath,
-    "--stop-when-exit-codes-found",
-    ERROR_EXIT_CODE.toString(),
-    "--checker-data",
-    wrapper.getTempCheckerCellPath(),
-    "--output",
-    sarifPath,
-    ...(timeout != null ? ["--timeout", timeout.toString()] : []),
-    "--disable-out-message-analysis",
-    "--exported-inputs",
-    getReportDirectory(wrapper.id),
-  ]);
+  await analyzer.run(
+    OPCODE_AUTHORIZATION_CHECK_FILENAME,
+    (wrapper) => [
+      "custom-checker-compiled",
+      "--checker",
+      wrapper.getTempBocPath(),
+      "--contract",
+      contractPath,
+      "--stop-when-exit-codes-found",
+      ERROR_EXIT_CODE.toString(),
+      "--checker-data",
+      wrapper.getTempCheckerCellPath(),
+      "--output",
+      sarifPath,
+      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
+      "--disable-out-message-analysis",
+      "--exported-inputs",
+      getReportDirectory(wrapper.id),
+      ...(verbose ? ["-v"] : []),
+    ],
+    completionMessage,
+  );
 
   const vulnerability = analyzer.vulnerabilityIsPresent();
   const nonFailingExecutionIndex = findNonFailingExecution(sarifPath);
@@ -117,6 +124,7 @@ async function extractOpcodeInfo(
   contractPath: string,
   ui: UIProvider,
   timeout: number | null,
+  verbose: boolean,
 ): Promise<OpcodeInfo | null> {
   return runOpcodeAuthorizationCheckAnalysis(
     opcode,
@@ -124,6 +132,8 @@ async function extractOpcodeInfo(
     contractPath,
     ui,
     timeout,
+    "Analysis complete.",
+    verbose,
   );
 }
 
@@ -133,6 +143,7 @@ async function getAllOpcodeInfo(
   contractPath: string,
   ui: UIProvider,
   timeout: number | null,
+  verbose: boolean,
 ): Promise<OpcodeInfo[]> {
   const results: OpcodeInfo[] = [];
   for (const opcode of opcodes) {
@@ -142,6 +153,7 @@ async function getAllOpcodeInfo(
       contractPath,
       ui,
       timeout,
+      verbose,
     );
     if (info !== null) {
       results.push(info);
@@ -182,7 +194,7 @@ const opcodeInfoHandler: CommandHandler = async (
   args: yargs.ArgumentsCamelCase,
 ) => {
   const { ui } = context;
-  const { timeout, contract } = args;
+  const { timeout, contract, verbose } = args;
 
   await buildContracts(ui);
   const codePath = findCompiledContract(contract as string);
@@ -203,6 +215,7 @@ const opcodeInfoHandler: CommandHandler = async (
     codePath,
     ui,
     (timeout as number) ?? null,
+    verbose as boolean,
   );
 
   ui.write("");
@@ -227,6 +240,11 @@ export const configureOpcodeInfoCommand = (context: CommandContext) => {
           type: "number",
           description: "Timeout in seconds for analyzing one opcode",
           default: 60,
+        })
+        .option("verbose", {
+          alias: "v",
+          type: "boolean",
+          description: "Use debug output in TSA log",
         }),
     handler: async (argv: yargs.ArgumentsCamelCase) => {
       await opcodeInfoHandler(context, argv);

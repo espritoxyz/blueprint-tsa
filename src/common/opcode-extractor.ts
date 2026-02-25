@@ -64,7 +64,7 @@ export async function extractOpcodes(
   ];
 
   try {
-    await analyzer.run(null, () => args);
+    await analyzer.run(null, () => args, "Opcode extraction completed.");
 
     // Read and parse the output file
     const content = readFileSync(outputFile, "utf-8").trim();
