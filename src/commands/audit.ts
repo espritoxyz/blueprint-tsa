@@ -5,7 +5,11 @@ import path from "path";
 import { CommandContext, CommandHandler } from "../cli.js";
 import { AUDIT_ID, Sym } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
-import { findCompiledContract, getSarifReportPath, findTSAReportsDirectory } from "../common/paths.js";
+import {
+  findCompiledContract,
+  getSarifReportPath,
+  findTSAReportsDirectory,
+} from "../common/paths.js";
 import { generateReportId } from "../common/format-utils.js";
 import { extractOpcodes } from "../common/opcode-extractor.js";
 import { UIProvider } from "@ton/blueprint";
@@ -322,7 +326,9 @@ const auditHandler: CommandHandler = async (
     summary.checks.push(ownerResult);
   } else {
     ui.write("");
-    ui.write(`${Sym.WARN} Owner-method was not specified - owner hijack check is skipped`);
+    ui.write(
+      `${Sym.WARN} Owner-method was not specified - owner hijack check is skipped`,
+    );
   }
 
   // Print summary
