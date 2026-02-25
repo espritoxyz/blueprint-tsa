@@ -27,13 +27,13 @@ interface OpcodeInfo {
   withAuthorization: boolean;
 }
 
-async function extractOpcodeInfo(
+export async function runOpcodeAuthorizationCheckAnalysis(
   opcode: number,
   contractName: string,
   contractPath: string,
   ui: UIProvider,
   timeout: number | null,
-): Promise<OpcodeInfo | null> {
+): Promise<AnalyzerWrapper> {
   const properties: TreeProperty[] = [
     { key: "Contract", value: contractName },
     { key: "Mode", value: "Opcode Authorization Check" },
@@ -82,8 +82,26 @@ async function extractOpcodeInfo(
     "--disable-out-message-analysis",
   ]);
 
-  const vulnerability = analyzer.vulnerabilityIsPresent();
+  return analyzer;
+}
 
+async function extractOpcodeInfo(
+  opcode: number,
+  contractName: string,
+  contractPath: string,
+  ui: UIProvider,
+  timeout: number | null,
+): Promise<OpcodeInfo | null> {
+  const analyzer = await runOpcodeAuthorizationCheckAnalysis(
+    opcode,
+    contractName,
+    contractPath,
+    ui,
+    timeout,
+  );
+
+  const sarifPath = getSarifReportPath(analyzer.id);
+  const vulnerability = analyzer.vulnerabilityIsPresent();
   const nonFailingExecutionIndex = findNonFailingExecution(sarifPath);
 
   if (nonFailingExecutionIndex === undefined && !vulnerability) {

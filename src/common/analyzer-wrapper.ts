@@ -7,6 +7,7 @@ import { Sym, ANALYSIS_INFO_TITLE } from "./constants.js";
 import { compileFuncFileToBase64Boc } from "./build-utils.js";
 import { Analyzer } from "./analyzer.js";
 import { generateTreeTable, TreeProperty } from "./draw.js";
+import { generateReportId } from "./format-utils.js";
 import {
   findExploitExecutionIndex,
   getMessageValue,
@@ -55,21 +56,7 @@ export class AnalyzerWrapper {
 
   constructor(config: AnalyzerWrapperConfig) {
     this.config = config;
-    this.id = this.generateId();
-  }
-
-  /**
-   * Generates unique id based on current date and time
-   */
-  private generateId(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const startOfDay = new Date(year, now.getMonth(), now.getDate());
-    const milliseconds = now.getTime() - startOfDay.getTime();
-
-    return `${year}-${month}-${day}-${milliseconds}`;
+    this.id = generateReportId();
   }
 
   /**

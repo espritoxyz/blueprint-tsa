@@ -105,6 +105,78 @@ const extractOptions = (ui: UIProvider, parsedArgs: any) => {
   return { options, properties };
 };
 
+/**
+ * Runs owner hijack check analysis and returns the analyzer wrapper
+ * @param contractName - Name of the contract
+ * @param contractPath - Path to the compiled contract
+ * @param ui - UI provider
+ * @param timeout - Analysis timeout in seconds
+ * @param methodId - Method ID of the owner getter
+ * @param opcodes - List of opcodes to analyze
+ * @param verbose - Enable verbose output
+ * @returns AnalyzerWrapper instance
+ */
+export const runOwnerHijackCheckAnalysis = async (
+  contractName: string,
+  contractPath: string,
+  ui: UIProvider,
+  timeout: number | null,
+  methodId: bigint,
+  opcodes: number[],
+  verbose: boolean = false,
+): Promise<AnalyzerWrapper> => {
+  const properties: TreeProperty[] = [
+    { key: "Contract", value: contractName },
+    { key: "Mode", value: "TON owner hijack" },
+    {
+      key: "Options",
+      separator: true,
+      children: [
+        {
+          key: "Timeout",
+          value: timeout !== null ? `${timeout} seconds` : "not set",
+        },
+        { key: "Method id", value: methodId.toString() },
+      ],
+    },
+  ];
+
+  const checkerPath = getCheckerPath(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME);
+  const checkerCell = beginCell().storeUint(methodId, 32).endCell();
+  const analyzer = new AnalyzerWrapper({
+    ui,
+    checkerPath,
+    checkerCell,
+    properties,
+    codePath: contractPath,
+  });
+
+  const reportDir = getReportDirectory(analyzer.id);
+  const sarifPath = getSarifReportPath(analyzer.id);
+
+  await analyzer.run(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME, (wrapper) => [
+    "custom-checker-compiled",
+    "--checker",
+    wrapper.getTempBocPath(),
+    "--contract",
+    contractPath,
+    "--stop-when-exit-codes-found",
+    ERROR_EXIT_CODE.toString(),
+    "--checker-data",
+    wrapper.getTempCheckerCellPath(),
+    "--output",
+    sarifPath,
+    "--exported-inputs",
+    reportDir,
+    ...(verbose ? ["-v"] : []),
+    ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
+    "--disable-out-message-analysis",
+    ...(timeout != null ? ["--timeout", timeout.toString()] : []),
+  ]);
+
+  return analyzer;
+};
+
 const ownerHijackCommand: CommandHandler = async (
   context: CommandContext,
   parsedArgs: any,
@@ -146,40 +218,15 @@ const ownerHijackCommand: CommandHandler = async (
       options.timeout !== null ? `${options.timeout} seconds` : "not set";
   }
 
-  const checkerPath = getCheckerPath(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME);
-  const checkerCell = beginCell().storeUint(options.methodId, 32).endCell();
-  const analyzer = new AnalyzerWrapper({
-    ui,
-    checkerPath,
-    checkerCell,
-    properties,
-    codePath: contractPath,
-  });
-
-  const reportDir = getReportDirectory(analyzer.id);
-  const sarifPath = getSarifReportPath(analyzer.id);
-
-  await analyzer.run(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME, (wrapper) => [
-    "custom-checker-compiled",
-    "--checker",
-    wrapper.getTempBocPath(),
-    "--contract",
+  const analyzer = await runOwnerHijackCheckAnalysis(
+    options.contract,
     contractPath,
-    "--stop-when-exit-codes-found",
-    ERROR_EXIT_CODE.toString(),
-    "--checker-data",
-    wrapper.getTempCheckerCellPath(),
-    "--output",
-    sarifPath,
-    "--exported-inputs",
-    reportDir,
-    ...(parsedArgs.verbose ? ["-v"] : []),
-    ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
-    "--disable-out-message-analysis",
-    ...(options.timeout != null
-      ? ["--timeout", options.timeout.toString()]
-      : []),
-  ]);
+    ui,
+    options.timeout,
+    options.methodId,
+    opcodes,
+    parsedArgs.verbose,
+  );
 
   const vulnerability = analyzer.getVulnerability();
   analyzer.reportVulnerability(vulnerability);

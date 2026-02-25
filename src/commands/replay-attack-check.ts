@@ -1,6 +1,7 @@
 import { Argv } from "yargs";
 import { existsSync } from "fs";
 import { beginCell } from "@ton/core";
+import { UIProvider } from "@ton/blueprint";
 import { TreeProperty } from "../common/draw.js";
 import { CommandHandler, CommandContext } from "../cli.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
@@ -49,30 +50,26 @@ export const configureReplayAttackCheckCommand = (
   };
 };
 
-const replayAttackCheckCommand: CommandHandler = async (
-  context: CommandContext,
-  parsedArgs: any,
-) => {
-  const { ui } = context;
-
-  await buildContracts(ui);
-
-  if (!parsedArgs.contract) {
-    throw new Error("Contract name or path is required");
-  }
-  const contract = parsedArgs.contract;
-  const contractPath = findCompiledContract(contract);
-
-  if (!existsSync(contractPath)) {
-    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
-    process.exit(1);
-  }
-
+/**
+ * Runs replay attack check analysis and returns the analyzer wrapper
+ * @param contractName - Name of the contract
+ * @param contractPath - Path to the compiled contract
+ * @param ui - UI provider
+ * @param timeout - Analysis timeout in seconds
+ * @param verbose - Enable verbose output
+ * @returns AnalyzerWrapper instance
+ */
+export const runReplayAttackCheckAnalysis = async (
+  contractName: string,
+  contractPath: string,
+  ui: UIProvider,
+  timeout: number | null,
+  verbose: boolean = false,
+): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME);
-  const timeout = parsedArgs.timeout ?? null;
 
   const properties: TreeProperty[] = [
-    { key: "Contract", value: contract },
+    { key: "Contract", value: contractName },
     { key: "Mode", value: "Replay attack check" },
     {
       key: "Options",
@@ -114,9 +111,41 @@ const replayAttackCheckCommand: CommandHandler = async (
     ...(timeout != null ? ["--timeout", timeout.toString()] : []),
     "--exported-inputs",
     reportDir,
-    ...(parsedArgs.verbose ? ["-v"] : []),
+    ...(verbose ? ["-v"] : []),
     "--disable-out-message-analysis",
   ]);
+
+  return analyzer;
+};
+
+const replayAttackCheckCommand: CommandHandler = async (
+  context: CommandContext,
+  parsedArgs: any,
+) => {
+  const { ui } = context;
+
+  await buildContracts(ui);
+
+  if (!parsedArgs.contract) {
+    throw new Error("Contract name or path is required");
+  }
+  const contract = parsedArgs.contract;
+  const contractPath = findCompiledContract(contract);
+
+  if (!existsSync(contractPath)) {
+    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
+    process.exit(1);
+  }
+
+  const timeout = parsedArgs.timeout ?? null;
+
+  const analyzer = await runReplayAttackCheckAnalysis(
+    contract,
+    contractPath,
+    ui,
+    timeout,
+    parsedArgs.verbose,
+  );
 
   const vulnerability = analyzer.getVulnerability();
 

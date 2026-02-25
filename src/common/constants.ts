@@ -5,7 +5,7 @@ export class Sym {
   public static WAIT = "⏳";
 }
 
-export const TSA_VERSION = "debug-24";
+export const TSA_VERSION = "debug-25";
 export const TSA_NAME = `tsa-cli-${TSA_VERSION}.jar`;
 export const TSA_URL = `https://github.com/tochilinak/tsa/releases/download/${TSA_VERSION}/tsa-cli.jar`;
 
@@ -25,6 +25,8 @@ export const OWNER_HIJACK_CHECK_ID = "owner-hijack";
 
 export const OPCODE_INFO = "opcode-info";
 export const OPCODE_AUTHORIZATION_CHECK_FILENAME = "authorization-check.fc";
+
+export const AUDIT_ID = "audit";
 
 export const ERROR_EXIT_CODE = 1000;
 export const NON_FAILING_EXIT_CODE = 1001;
