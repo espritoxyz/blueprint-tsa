@@ -17,7 +17,7 @@ import {
   ERROR_EXIT_CODE,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
-import { printCleanupInstructions } from "../reproduce/utils.js";
+import { printCleanupInstructions, printReproductionInstructions } from "../reproduce/utils.js";
 import {
   findCompiledContract,
   getCheckerPath,
@@ -129,6 +129,14 @@ export const runDrainCheckAnalysis = async (
     ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
   ]);
 
+  // Write reproduction config if vulnerability is found
+  const vulnerability = analyzer.getVulnerability();
+  if (vulnerability) {
+    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {
+      kind: DRAIN_CHECK_ID,
+    });
+  }
+
   return analyzer;
 };
 
@@ -186,13 +194,7 @@ const drainCheckCommand: CommandHandler = async (
   printCleanupInstructions(ui);
 
   if (vulnerability != null) {
-    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {
-      kind: DRAIN_CHECK_ID,
-    });
-    const configPath = getReproduceConfigPath(analyzer.id);
-    const relativeConfigPath = path.relative(process.cwd(), configPath);
-    ui.write("To reproduce the vulnerability on the blockchain, run:");
-    ui.write(`> yarn blueprint tsa reproduce --config ${relativeConfigPath}`);
+    printReproductionInstructions(ui, analyzer.id);
 
     process.exit(2);
   }

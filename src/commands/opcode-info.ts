@@ -1,5 +1,6 @@
 import { Argv } from "yargs";
 import yargs from "yargs";
+import path from "path";
 import { CommandContext, CommandHandler } from "../cli.js";
 import {
   OPCODE_INFO,
@@ -14,6 +15,8 @@ import {
   findCompiledContract,
   getSarifReportPath,
   getCheckerPath,
+  getReportDirectory,
+  getInputsPath,
 } from "../common/paths.js";
 import { existsSync } from "fs";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
@@ -22,9 +25,10 @@ import { TreeProperty } from "../common/draw.js";
 import { formatOpcodeHex } from "../common/format-utils.js";
 import { findNonFailingExecution } from "../common/result-parsing.js";
 
-interface OpcodeInfo {
+export interface OpcodeInfo {
   opcode: number;
   withAuthorization: boolean;
+  vulnerabilityPath?: string;
 }
 
 export async function runOpcodeAuthorizationCheckAnalysis(
@@ -33,7 +37,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
   contractPath: string,
   ui: UIProvider,
   timeout: number | null,
-): Promise<AnalyzerWrapper> {
+): Promise<OpcodeInfo | null> {
   const properties: TreeProperty[] = [
     { key: "Contract", value: contractName },
     { key: "Mode", value: "Opcode Authorization Check" },
@@ -80,9 +84,31 @@ export async function runOpcodeAuthorizationCheckAnalysis(
     sarifPath,
     ...(timeout != null ? ["--timeout", timeout.toString()] : []),
     "--disable-out-message-analysis",
+    "--exported-inputs",
+    getReportDirectory(wrapper.id),
   ]);
 
-  return analyzer;
+  const vulnerability = analyzer.vulnerabilityIsPresent();
+  const nonFailingExecutionIndex = findNonFailingExecution(sarifPath);
+
+  if (nonFailingExecutionIndex === undefined && !vulnerability) {
+    return null;
+  }
+
+  const withAuthorization = !vulnerability;
+  let vulnerabilityPath: string | undefined;
+  if (vulnerability) {
+    const vulnDesc = analyzer.getVulnerability();
+    if (vulnDesc) {
+      vulnerabilityPath = getInputsPath(analyzer.id, vulnDesc.executionIndex);
+    }
+  }
+
+  return {
+    opcode,
+    withAuthorization,
+    vulnerabilityPath,
+  };
 }
 
 async function extractOpcodeInfo(
@@ -92,28 +118,13 @@ async function extractOpcodeInfo(
   ui: UIProvider,
   timeout: number | null,
 ): Promise<OpcodeInfo | null> {
-  const analyzer = await runOpcodeAuthorizationCheckAnalysis(
+  return runOpcodeAuthorizationCheckAnalysis(
     opcode,
     contractName,
     contractPath,
     ui,
     timeout,
   );
-
-  const sarifPath = getSarifReportPath(analyzer.id);
-  const vulnerability = analyzer.vulnerabilityIsPresent();
-  const nonFailingExecutionIndex = findNonFailingExecution(sarifPath);
-
-  if (nonFailingExecutionIndex === undefined && !vulnerability) {
-    return null;
-  }
-
-  const withAuthorization = !vulnerability;
-
-  return {
-    opcode,
-    withAuthorization,
-  };
 }
 
 async function getAllOpcodeInfo(
@@ -139,12 +150,12 @@ async function getAllOpcodeInfo(
   return results;
 }
 
-function formatOpcodeInfo(infos: OpcodeInfo[]): string {
+export function formatOpcodeInfo(infos: OpcodeInfo[]): string {
   if (infos.length === 0) {
     return "No opcodes to analyze.";
   }
 
-  const lines: string[] = ["\nOpcode Authorization Analysis:", ""];
+  const lines: string[] = ["Opcode Authorization Analysis:", ""];
 
   for (const info of infos) {
     const opcodeHex = formatOpcodeHex(info.opcode);
@@ -152,6 +163,14 @@ function formatOpcodeInfo(infos: OpcodeInfo[]): string {
       ? `${Sym.OK} Has authorization checks`
       : `${Sym.WARN} No authorization checks`;
     lines.push(`${opcodeHex}: ${authStatus}`);
+
+    // If authorization is missing and vulnerability path is available, show it
+    if (!info.withAuthorization && info.vulnerabilityPath) {
+      const relativePath = path.relative(process.cwd(), info.vulnerabilityPath);
+      lines.push(`  Path to reproducing input: ${relativePath}`);
+    }
+
+    lines.push("");
   }
 
   lines.push("");
@@ -185,6 +204,8 @@ const opcodeInfoHandler: CommandHandler = async (
     ui,
     (timeout as number) ?? null,
   );
+
+  ui.write("");
   const output = formatOpcodeInfo(infos);
   ui.write(output);
 };

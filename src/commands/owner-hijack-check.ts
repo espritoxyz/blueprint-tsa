@@ -8,14 +8,13 @@ import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 import { writeReproduceConfig } from "../reproduce/build-config.js";
 import {
   ERROR_EXIT_CODE,
-  OWNER_HIJACK_CHECK,
   OWNER_HIJACK_CHECK_CONCRETE_FILENAME,
   OWNER_HIJACK_CHECK_ID,
   OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME,
   Sym,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
-import { printCleanupInstructions } from "../reproduce/utils.js";
+import { printCleanupInstructions, printReproductionInstructions } from "../reproduce/utils.js";
 import {
   findCompiledContract,
   getCheckerPath,
@@ -32,7 +31,7 @@ import { extractOpcodes } from "../common/opcode-extractor.js";
 const ONE_MINUTE_SECONDS = 60;
 
 export const configureOwnerHijackCommand = (context: CommandContext): any => ({
-  command: OWNER_HIJACK_CHECK,
+  command: OWNER_HIJACK_CHECK_ID,
   description: "Analyze contract for the possibility of owner hijack",
   builder: (yargs: Argv) =>
     yargs
@@ -174,6 +173,21 @@ export const runOwnerHijackCheckAnalysis = async (
     ...(timeout != null ? ["--timeout", timeout.toString()] : []),
   ]);
 
+  // Write reproduction config if vulnerability is found
+  const vulnerability = analyzer.getVulnerability();
+  if (vulnerability) {
+    writeReproduceConfig(
+      vulnerability,
+      OWNER_HIJACK_CHECK_ID,
+      timeout,
+      analyzer.id,
+      {
+        kind: "owner-hijack-check",
+        methodId: methodId.toString(),
+      },
+    );
+  }
+
   return analyzer;
 };
 
@@ -234,20 +248,7 @@ const ownerHijackCommand: CommandHandler = async (
   printCleanupInstructions(ui);
 
   if (vulnerability != null) {
-    writeReproduceConfig(
-      vulnerability,
-      OWNER_HIJACK_CHECK_ID,
-      options.timeout,
-      analyzer.id,
-      {
-        kind: "owner-hijack-check",
-        methodId: options.methodId.toString(),
-      },
-    );
-    const configPath = getReproduceConfigPath(analyzer.id);
-    const relativeConfigPath = path.relative(process.cwd(), configPath);
-    ui.write("To reproduce the vulnerability on the blockchain, run:");
-    ui.write(`> yarn blueprint tsa reproduce --config ${relativeConfigPath}`);
+    printReproductionInstructions(ui, analyzer.id);
 
     process.exit(2);
   }

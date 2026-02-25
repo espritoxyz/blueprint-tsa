@@ -18,15 +18,18 @@ export const REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME =
   "replay-attack-symbolic.fc";
 export const REPLAY_ATTACK_CHECK_ID = "replay-attack-check";
 
-export const OWNER_HIJACK_CHECK = "owner-hijack-check";
+export const OWNER_HIJACK_CHECK_ID = "owner-hijack-check";
 export const OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME = "owner-hijack-symbolic.fc";
 export const OWNER_HIJACK_CHECK_CONCRETE_FILENAME = "owner-hijack-concrete.fc";
-export const OWNER_HIJACK_CHECK_ID = "owner-hijack";
 
 export const OPCODE_INFO = "opcode-info";
 export const OPCODE_AUTHORIZATION_CHECK_FILENAME = "authorization-check.fc";
 
 export const AUDIT_ID = "audit";
+
+export const DRAIN_CHECK_NAME = "Drain Check";
+export const REPLAY_ATTACK_CHECK_NAME = "Replay Attack Check";
+export const OWNER_HIJACK_CHECK_NAME = "Owner Hijack Check";
 
 export const ERROR_EXIT_CODE = 1000;
 export const NON_FAILING_EXIT_CODE = 1001;
