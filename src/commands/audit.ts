@@ -9,9 +9,11 @@ import {
   DRAIN_CHECK_ID,
   REPLAY_ATTACK_CHECK_ID,
   OWNER_HIJACK_CHECK_ID,
+  BOUNCE_CHECK_ID,
   DRAIN_CHECK_NAME,
   REPLAY_ATTACK_CHECK_NAME,
   OWNER_HIJACK_CHECK_NAME,
+  BOUNCE_CHECK_NAME,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
 import {
@@ -30,6 +32,7 @@ import {
 import { runDrainCheckAnalysis } from "./drain-check.js";
 import { runReplayAttackCheckAnalysis } from "./replay-attack-check.js";
 import { runOwnerHijackCheckAnalysis } from "./owner-hijack-check.js";
+import { runBounceCheckAnalysis } from "./bounce-check.js";
 import {
   runOpcodeAuthorizationCheckAnalysis,
   formatOpcodeInfo,
@@ -67,6 +70,8 @@ function getCheckCommand(
     commandId = REPLAY_ATTACK_CHECK_ID;
   } else if (checkName === OWNER_HIJACK_CHECK_NAME) {
     commandId = OWNER_HIJACK_CHECK_ID;
+  } else if (checkName === BOUNCE_CHECK_NAME) {
+    commandId = BOUNCE_CHECK_ID;
   }
 
   if (!commandId) {
@@ -245,6 +250,34 @@ async function runOwnerHijackCheck(
   );
 }
 
+async function runBounceCheck(
+  contractName: string,
+  contractPath: string,
+  ui: UIProvider,
+  timeout: number | null,
+  opcodes: number[],
+  verbose: boolean,
+): Promise<CheckResult> {
+  const analyzer = await runBounceCheckAnalysis(
+    contractName,
+    contractPath,
+    ui,
+    timeout,
+    opcodes,
+    verbose,
+    `${BOUNCE_CHECK_NAME} completed.`,
+  );
+
+  return buildCheckResult(
+    BOUNCE_CHECK_NAME,
+    analyzer,
+    "No bounce message handling vulnerabilities detected",
+    "Vulnerability found - contract may not handle bounced messages correctly",
+    contractName,
+    timeout,
+  );
+}
+
 function buildAuditReport(summary: AuditSummary): string {
   const lines: string[] = [];
 
@@ -416,6 +449,19 @@ const auditHandler: CommandHandler = async (
     verbose as boolean,
   );
   summary.checks.push(replayResult);
+
+  // Run bounce-check
+  ui.write("");
+  ui.write(`${Sym.WAIT} Running bounce check...`);
+  const bounceResult = await runBounceCheck(
+    contract as string,
+    contractPath,
+    ui,
+    effectiveTimeout,
+    opcodes,
+    verbose as boolean,
+  );
+  summary.checks.push(bounceResult);
 
   // Run owner-hijack-check if owner method is provided
   if (ownerMethod) {

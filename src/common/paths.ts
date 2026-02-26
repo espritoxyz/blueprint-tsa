@@ -139,3 +139,11 @@ export const getTsaRunLogPath = (id: string): string => {
   const reportDir = getReportDirectory(id);
   return path.join(reportDir, "tsa.log");
 };
+
+export const getThrowerPath = (): string => {
+  return path.join(
+    path.dirname(__filename),
+    "../../src/checkers",
+    "thrower.fc",
+  );
+};
