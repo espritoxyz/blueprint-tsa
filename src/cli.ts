@@ -7,6 +7,7 @@ import { configureReproduceCommand } from "./commands/reproduce.js";
 import { configureReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
 import { configureOpcodeInfoCommand } from "./commands/opcode-info.js";
 import { configureAuditCommand } from "./commands/audit.js";
+import { configureBounceCheckCommand } from "./commands/bounce-check.js";
 
 export interface CommandContext {
   ui: UIProvider;
@@ -35,6 +36,7 @@ export const createCLI = (context: CommandContext) => {
   const ownerHijackConfig = configureOwnerHijackCommand(context);
   const opcodeInfoConfig = configureOpcodeInfoCommand(context);
   const auditConfig = configureAuditCommand(context);
+  const bounceCheckConfig = configureBounceCheckCommand(context);
 
   return yargs(argv)
     .scriptName("tsa")
@@ -79,6 +81,12 @@ export const createCLI = (context: CommandContext) => {
       auditConfig.description,
       auditConfig.builder,
       auditConfig.handler,
+    )
+    .command(
+      bounceCheckConfig.command,
+      bounceCheckConfig.description,
+      bounceCheckConfig.builder,
+      bounceCheckConfig.handler,
     )
     .demandCommand(1, "Please specify a subcommand")
     .help()

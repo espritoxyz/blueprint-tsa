@@ -1,12 +1,13 @@
 import { Cell } from "@ton/core";
 import { UIProvider } from "@ton/blueprint";
-import { readFileSync, unlinkSync } from "fs";
+import { readFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { randomBytes } from "crypto";
 import { AnalyzerWrapper } from "./analyzer-wrapper.js";
 import { TreeProperty } from "./draw.js";
 import { formatOpcodeHex } from "./format-utils.js";
+import { doWithTemporaryFile } from "./file-utils.js";
 
 const OPCODE_EXTRACTION_TIMEOUT_SECONDS = 20;
 
@@ -45,29 +46,35 @@ export async function extractOpcodes(
     `opcodes-${randomBytes(8).toString("hex")}.txt`,
   );
 
-  const analyzer = new AnalyzerWrapper({
-    ui: config.ui,
-    checkerPath: null,
-    checkerCell: new Cell(),
-    properties,
-    codePath: config.codePath,
-  });
+  return doWithTemporaryFile(async (tempPath) => {
+    const analyzer = new AnalyzerWrapper({
+      ui: config.ui,
+      checkerPath: null,
+      checkerCell: new Cell(),
+      properties,
+      codePath: config.codePath,
+    });
 
-  const args = [
-    "opcodes",
-    "--input",
-    config.codePath,
-    "--output",
-    outputFile,
-    "--timeout",
-    OPCODE_EXTRACTION_TIMEOUT_SECONDS.toString(),
-  ];
+    const args = [
+      "opcodes",
+      "--input",
+      config.codePath,
+      "--output",
+      tempPath,
+      "--timeout",
+      OPCODE_EXTRACTION_TIMEOUT_SECONDS.toString(),
+    ];
 
-  try {
     await analyzer.run(null, () => args, "Opcode extraction completed.");
 
     // Read and parse the output file
-    const content = readFileSync(outputFile, "utf-8").trim();
+    const content = readFileSync(tempPath, "utf-8").trim();
+
+    if (content.length === 0) {
+      config.ui.write("Extracted opcodes: []");
+      return [];
+    }
+
     const opcodes = content.split("\n").map((op) => parseInt(op.trim(), 10));
 
     config.ui.write(
@@ -75,8 +82,5 @@ export async function extractOpcodes(
     );
 
     return opcodes;
-  } finally {
-    // Clean up temporary file
-    unlinkSync(outputFile);
-  }
+  }, outputFile);
 }

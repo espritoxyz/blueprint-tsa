@@ -209,6 +209,13 @@ const opcodeInfoHandler: CommandHandler = async (
     codePath,
     contractName: contract as string,
   });
+
+  if (opcodes.length === 0) {
+    ui.write("");
+    ui.write(`${Sym.WARN} No opcodes found in contract`);
+    return;
+  }
+
   const infos = await getAllOpcodeInfo(
     opcodes,
     contract as string,
