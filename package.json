@@ -1,6 +1,6 @@
 {
   "name": "blueprint-tsa",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "TSA plugin for TON Blueprint",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -34,9 +34,9 @@
   },
   "dependencies": {
     "@ton/blueprint": "^0.42.0",
-    "@ton/core": "^0.62.0",
+    "@ton/core": "^0.63.0",
     "@ton/crypto": "^3.3.0",
-    "@ton/ton": "^16.1.0",
+    "@ton/ton": "^16.2.0",
     "tar": "^7.5.2",
     "unzipper": "^0.12.3",
     "yargs": "^17.7.2",
