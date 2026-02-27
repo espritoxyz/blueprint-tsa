@@ -11,6 +11,7 @@ import {
   OWNER_HIJACK_CHECK_ID,
   OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME,
   Sym,
+  OWNER_HIJACK_DESCRIPTION_URL,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
 import {
@@ -249,7 +250,7 @@ const ownerHijackCommand: CommandHandler = async (
   );
 
   const vulnerability = analyzer.getVulnerability();
-  analyzer.reportVulnerability(vulnerability);
+  analyzer.reportVulnerability(vulnerability, OWNER_HIJACK_DESCRIPTION_URL);
 
   printCleanupInstructions(ui);
 

@@ -7,6 +7,7 @@ import {
   Sym,
   ERROR_EXIT_CODE,
   OPCODE_AUTHORIZATION_CHECK_FILENAME,
+  OPCODE_INFO_DESCRIPTION_URL,
 } from "../common/constants.js";
 import { UIProvider } from "@ton/blueprint";
 import { extractOpcodes } from "../common/opcode-extractor.js";
@@ -169,6 +170,7 @@ export function formatOpcodeInfo(infos: OpcodeInfo[]): string {
 
   const lines: string[] = ["Opcode Authorization Analysis:", ""];
 
+  let hasUnauthorizedOpcodes = false;
   for (const info of infos) {
     const opcodeHex = formatOpcodeHex(info.opcode);
     const authStatus = info.withAuthorization
@@ -180,9 +182,15 @@ export function formatOpcodeInfo(infos: OpcodeInfo[]): string {
     if (!info.withAuthorization && info.vulnerabilityPath) {
       const relativePath = path.relative(process.cwd(), info.vulnerabilityPath);
       lines.push(`  Path to reproducing input: ${relativePath}`);
+      hasUnauthorizedOpcodes = true;
     }
 
     lines.push("");
+  }
+
+  // Add description URL if any opcodes lack authorization
+  if (hasUnauthorizedOpcodes) {
+    lines.push(`Description: ${OPCODE_INFO_DESCRIPTION_URL}`);
   }
 
   lines.push("");
