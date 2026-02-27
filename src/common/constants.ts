@@ -5,9 +5,9 @@ export class Sym {
   public static WAIT = "⏳";
 }
 
-export const TSA_VERSION = "debug-26";
+export const TSA_VERSION = "v0.5.0";
 export const TSA_NAME = `tsa-cli-${TSA_VERSION}.jar`;
-export const TSA_URL = `https://github.com/tochilinak/tsa/releases/download/${TSA_VERSION}/tsa-cli.jar`;
+export const TSA_URL = `https://github.com/espritoxyz/tsa/releases/download/${TSA_VERSION}/tsa-cli.jar`;
 
 export const DRAIN_CHECK_SYMBOLIC_FILENAME = "drain-check-symbolic.fc";
 export const DRAIN_CHECK_CONCRETE_FILENAME = "drain-check-concrete.fc";
