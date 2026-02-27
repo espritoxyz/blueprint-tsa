@@ -7,7 +7,7 @@ export class TsaPlugin implements Plugin {
       {
         name: "tsa",
         runner: tsa,
-        help: "TODO",
+        help: "TON Symbolic Analyzer",
       },
     ];
   }
