@@ -1,6 +1,6 @@
 import { Argv } from "yargs";
 import { existsSync } from "fs";
-import { beginCell } from "@ton/core";
+import { beginCell, getMethodId } from "@ton/core";
 import { UIProvider } from "@ton/blueprint";
 import { TreeProperty } from "../common/draw.js";
 import { CommandHandler, CommandContext } from "../cli.js";
@@ -39,6 +39,19 @@ export const configureReplayAttackCheckCommand = (
           description: "Contract name",
           demandOption: true,
         })
+        .option("seqno-method-name", {
+          alias: "s",
+          type: "string",
+          description: "Method name of a seqno getter method",
+          demandOption: false,
+        })
+        .option("seqno-restriction", {
+          alias: "r",
+          type: "number",
+          description:
+            "The upper bound of a seqno. Only the seq numbers that satisfy the restrictions are considered in executions",
+          demandOption: false,
+        })
         .option("verbose", {
           alias: "v",
           type: "boolean",
@@ -50,6 +63,11 @@ export const configureReplayAttackCheckCommand = (
   };
 };
 
+interface SeqnoData {
+  getterName: string;
+  upperBound: number;
+}
+
 /**
  * Runs replay attack check analysis and returns the analyzer wrapper
  * @param contractName - Name of the contract
@@ -57,6 +75,7 @@ export const configureReplayAttackCheckCommand = (
  * @param ui - UI provider
  * @param timeout - Analysis timeout in seconds
  * @param verbose - Enable verbose output
+ * @param seqnoData - Add the seqno constraints on the checker
  * @returns AnalyzerWrapper instance
  */
 export const runReplayAttackCheckAnalysis = async (
@@ -66,6 +85,7 @@ export const runReplayAttackCheckAnalysis = async (
   timeout: number | null,
   verbose: boolean = false,
   completionMessage: string = "Analysis complete.",
+  seqnoData: SeqnoData | null = null,
 ): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME);
 
@@ -80,11 +100,22 @@ export const runReplayAttackCheckAnalysis = async (
           key: "Timeout",
           value: timeout !== null ? `${timeout} seconds` : "not set",
         },
+        {
+          key: "SeqnoData",
+          value: seqnoData !== null ? JSON.stringify(seqnoData) : "not set",
+        },
       ],
     },
   ];
 
-  const checkerCell = beginCell().endCell();
+  const checkerCell =
+    seqnoData !== null
+      ? beginCell()
+          .storeUint(1, 1)
+          .storeUint(getMethodId(seqnoData.getterName), 32)
+          .storeUint(seqnoData.upperBound, 256)
+          .endCell()
+      : beginCell().storeUint(0, 1).endCell();
 
   const analyzer = new AnalyzerWrapper({
     ui,
@@ -115,7 +146,7 @@ export const runReplayAttackCheckAnalysis = async (
       "--exported-inputs",
       reportDir,
       ...(verbose ? ["-v"] : []),
-      "--disable-out-message-analysis",
+      "--continue-on-contract-exception",
     ],
     completionMessage,
   );
@@ -144,12 +175,32 @@ const replayAttackCheckCommand: CommandHandler = async (
 
   const timeout = parsedArgs.timeout ?? null;
 
+  const getSeqnoMethodName: string | undefined = parsedArgs.seqnoMethodName;
+  const getSeqnoRestriction: number | undefined = parsedArgs.seqnoRestriction;
+  var seqnoData: SeqnoData | null = null;
+  if (getSeqnoMethodName !== undefined && getSeqnoRestriction !== undefined) {
+    seqnoData = {
+      getterName: getSeqnoMethodName,
+      upperBound: getSeqnoRestriction,
+    };
+  } else if (
+    getSeqnoRestriction !== undefined ||
+    getSeqnoMethodName !== undefined
+  ) {
+    ui.write(
+      `\n${Sym.ERR} you should specify either both the seqno getter method and seqno restriction or neither`,
+    );
+    process.exit(1);
+  }
+
   const analyzer = await runReplayAttackCheckAnalysis(
     contract,
     contractPath,
     ui,
     timeout,
     parsedArgs.verbose,
+    "Analysis complete.",
+    seqnoData,
   );
 
   const vulnerability = analyzer.getVulnerability();
