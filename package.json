@@ -1,19 +1,19 @@
 {
   "name": "blueprint-tsa",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "TSA plugin for TON Blueprint",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "checkers"
+    "src/checkers"
   ],
   "license": "MIT",
   "scripts": {
     "build": "tsc",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "postinstall": "[ -d dist ] && node dist/install/postinstall.js || true"
+    "postinstall": "node dist/install/postinstall.js"
   },
   "devDependencies": {
     "@tact-lang/compiler": "^1.6.13",
