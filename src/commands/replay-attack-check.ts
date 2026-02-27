@@ -113,7 +113,7 @@ export const runReplayAttackCheckAnalysis = async (
       ? beginCell()
           .storeUint(1, 1)
           .storeUint(getMethodId(seqnoData.getterName), 32)
-          .storeUint(seqnoData.upperBound, 255)
+          .storeUint(seqnoData.upperBound, 256)
           .endCell()
       : beginCell().storeUint(0, 1).endCell();
 
