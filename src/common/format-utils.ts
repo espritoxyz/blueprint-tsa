@@ -22,3 +22,7 @@ export function generateReportId(): string {
 
   return `${year}-${month}-${day}-${milliseconds}`;
 }
+
+export function nanotonToTon(nanotons: bigint): number {
+  return Number(nanotons) / 1e9;
+}

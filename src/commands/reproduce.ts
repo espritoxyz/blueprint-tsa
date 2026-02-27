@@ -23,6 +23,7 @@ import { printCleanupInstructions } from "../reproduce/utils.js";
 import { CommandContext } from "../cli.js";
 import { Argv } from "yargs";
 import { TsaVulnerabilityConfigSchema } from "../reproduce/reproduce-config.js";
+import { nanotonToTon } from "../common/format-utils.js";
 
 export const configureReproduceCommand = (context: CommandContext): any => ({
   command: REPRODUCE_ID,
@@ -56,7 +57,7 @@ async function checkAddressContainsExpectedData(
     ui.write(
       `${Sym.OK} The data stored at contract matches the expected data.`,
     );
-    ui.write(`${Sym.OK} Balance: ${contractState.balance}.`);
+    ui.write(`${Sym.OK} Balance: ${nanotonToTon(contractState.balance)}.`);
   } else {
     ui.write(
       `${Sym.ERR} Contract data on the contract does not match data on the config`,

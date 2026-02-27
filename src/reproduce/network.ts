@@ -10,6 +10,7 @@ import {
 import { NetworkProvider } from "@ton/blueprint";
 import { DEPLOY_WAIT_ATTEMPTS, Sym } from "../common/constants.js";
 import { compileFuncFileToBase64Boc } from "../common/build-utils.js";
+import { nanotonToTon } from "../common/format-utils.js";
 import { getCheckerPath } from "../common/paths.js";
 
 export interface DeployConfig {
@@ -73,8 +74,11 @@ export const deployViaChameleon = async (
       .endCell(),
   };
   const chameleonAddress = contractAddress(0, chameleonStateInit);
+  const suggested = nanotonToTon(
+    config.suggestedValue + config.suggestedBalance,
+  );
   const tonsForSendingMessageInput = await ui.input(
-    `Enter amount of TONs for deployment message (suggested: ${config.suggestedValue + config.suggestedBalance} + fees):`,
+    `Enter amount of TONs for deployment message (suggested: ${suggested} + fees):`,
   );
 
   const tonsForSendingMessage = toNano(tonsForSendingMessageInput);
@@ -111,7 +115,7 @@ export const reproduce = async (
 ) => {
   const ui = network.ui();
   ui.write(
-    `Number of TONs for reproduction message: ${Number(config.suggestedValue) / 1e9}`,
+    `Number of TONs for reproduction message: ${nanotonToTon(config.suggestedValue)}`,
   );
   ui.write(`${Sym.WAIT} Sending a reproduction message`);
   await network.sender().send({
