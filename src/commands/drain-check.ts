@@ -14,6 +14,7 @@ import {
   DRAIN_CHECK_ID,
   DRAIN_CHECK_CONCRETE_FILENAME,
   ERROR_EXIT_CODE,
+  DRAIN_DESCRIPTION_URL,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
 import {
@@ -195,7 +196,7 @@ const drainCheckCommand: CommandHandler = async (
   );
 
   const vulnerability = analyzer.getVulnerability();
-  analyzer.reportVulnerability(vulnerability);
+  analyzer.reportVulnerability(vulnerability, DRAIN_DESCRIPTION_URL);
 
   printCleanupInstructions(ui);
 

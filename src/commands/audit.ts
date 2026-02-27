@@ -14,6 +14,10 @@ import {
   REPLAY_ATTACK_CHECK_NAME,
   OWNER_HIJACK_CHECK_NAME,
   BOUNCE_CHECK_NAME,
+  DRAIN_DESCRIPTION_URL,
+  REPLAY_DESCRIPTION_URL,
+  OWNER_HIJACK_DESCRIPTION_URL,
+  BOUNCE_DESCRIPTION_URL,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
 import {
@@ -48,6 +52,7 @@ interface CheckResult {
   vulnerabilityPath?: string;
   analyzerId?: string;
   checkCommand: string;
+  descriptionUrl?: string;
 }
 
 interface AuditSummary {
@@ -89,6 +94,19 @@ function getCheckCommand(
   return command;
 }
 
+function getCheckDescriptionUrl(checkName: string): string | undefined {
+  if (checkName === DRAIN_CHECK_NAME) {
+    return DRAIN_DESCRIPTION_URL;
+  } else if (checkName === REPLAY_ATTACK_CHECK_NAME) {
+    return REPLAY_DESCRIPTION_URL;
+  } else if (checkName === OWNER_HIJACK_CHECK_NAME) {
+    return OWNER_HIJACK_DESCRIPTION_URL;
+  } else if (checkName === BOUNCE_CHECK_NAME) {
+    return BOUNCE_DESCRIPTION_URL;
+  }
+  return undefined;
+}
+
 function buildCheckResult(
   checkName: string,
   analyzer: any,
@@ -120,6 +138,7 @@ function buildCheckResult(
       );
       result.analyzerId = analyzer.id;
     }
+    result.descriptionUrl = getCheckDescriptionUrl(checkName);
   }
 
   return result;
@@ -306,6 +325,9 @@ function buildAuditReport(summary: AuditSummary): string {
         check.vulnerabilityPath,
       );
       lines.push(`     Path to reproducing input: ${relativePath}`);
+    }
+    if (check.descriptionUrl) {
+      lines.push(`     Description: ${check.descriptionUrl}`);
     }
     lines.push("");
     if (!check.passed) {

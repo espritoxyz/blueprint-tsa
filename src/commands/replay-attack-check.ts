@@ -10,6 +10,7 @@ import {
   REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME,
   REPLAY_ATTACK_CHECK_ID,
   ERROR_EXIT_CODE,
+  REPLAY_DESCRIPTION_URL,
 } from "../common/constants.js";
 import { buildContracts } from "../common/build-utils.js";
 import { printCleanupInstructions } from "../reproduce/utils.js";
@@ -205,7 +206,7 @@ const replayAttackCheckCommand: CommandHandler = async (
 
   const vulnerability = analyzer.getVulnerability();
 
-  analyzer.reportVulnerability(vulnerability);
+  analyzer.reportVulnerability(vulnerability, REPLAY_DESCRIPTION_URL);
 
   printCleanupInstructions(ui);
 };

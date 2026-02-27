@@ -233,7 +233,10 @@ export class AnalyzerWrapper {
     return index !== undefined;
   }
 
-  reportVulnerability(vulnerability: VulnerabilityDescription | null) {
+  reportVulnerability(
+    vulnerability: VulnerabilityDescription | null,
+    descriptionUrl?: string,
+  ) {
     const summaryPath = getSummaryPath(this.id);
     const sarifPath = getSarifReportPath(this.id);
 
@@ -254,8 +257,14 @@ export class AnalyzerWrapper {
       `Typed message body: ${getMsgBodyTypesPath(this.id, vulnerability.executionIndex)}`,
       `Typed contract data: ${getContractDataTypesPath(this.id, vulnerability.executionIndex)}`,
       `SARIF with full information: ${sarifPath}`,
-      "",
     ];
+
+    if (descriptionUrl) {
+      reportLines.push("");
+      reportLines.push(`Description of the vulnerability: ${descriptionUrl}`);
+    }
+
+    reportLines.push("");
 
     this.config.ui.write("");
     for (const line of reportLines) {

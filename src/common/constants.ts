@@ -12,24 +12,35 @@ export const TSA_URL = `https://github.com/tochilinak/tsa/releases/download/${TS
 export const DRAIN_CHECK_SYMBOLIC_FILENAME = "drain-check-symbolic.fc";
 export const DRAIN_CHECK_CONCRETE_FILENAME = "drain-check-concrete.fc";
 export const DRAIN_CHECK_ID = "drain-check";
+export const DRAIN_DESCRIPTION_URL =
+  "https://tonsec.dev/docs/builtin-checkers#drain-check";
+
 export const REPRODUCE_ID = "reproduce";
 
 export const REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME =
   "replay-attack-symbolic.fc";
 export const REPLAY_ATTACK_CHECK_ID = "replay-attack-check";
+export const REPLAY_DESCRIPTION_URL =
+  "https://tonsec.dev/docs/builtin-checkers#replay-attack-checker";
 
 export const BOUNCE_CHECK_FILENAME = "bounce-check.fc";
 export const BOUNCE_CHECK_SCHEME_FILENAME = "bounce-check-scheme.json";
 export const BOUNCE_CHECK_ID = "bounce-check";
+export const BOUNCE_DESCRIPTION_URL =
+  "https://tonsec.dev/docs/builtin-checkers#bounced-messages-processing-checker";
 
 export const THROWER_FILENAME = "thrower-contract.fc";
 
 export const OWNER_HIJACK_CHECK_ID = "owner-hijack-check";
 export const OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME = "owner-hijack-symbolic.fc";
 export const OWNER_HIJACK_CHECK_CONCRETE_FILENAME = "owner-hijack-concrete.fc";
+export const OWNER_HIJACK_DESCRIPTION_URL =
+  "https://tonsec.dev/docs/builtin-checkers#ownership-hijack-check";
 
 export const OPCODE_INFO = "opcode-info";
 export const OPCODE_AUTHORIZATION_CHECK_FILENAME = "authorization-check.fc";
+export const OPCODE_INFO_DESCRIPTION_URL =
+  "https://tonsec.dev/docs/builtin-checkers#opcode-authorization-check";
 
 export const AUDIT_ID = "audit";
 

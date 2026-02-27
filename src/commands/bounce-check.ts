@@ -13,6 +13,7 @@ import {
   ERROR_EXIT_CODE,
   BOUNCE_CHECK_NAME,
   THROWER_FILENAME,
+  BOUNCE_DESCRIPTION_URL,
 } from "../common/constants.js";
 import {
   buildContracts,
@@ -211,7 +212,7 @@ const bounceCheckCommand: CommandHandler = async (
 
   const vulnerability = analyzer.getVulnerability();
 
-  analyzer.reportVulnerability(vulnerability);
+  analyzer.reportVulnerability(vulnerability, BOUNCE_DESCRIPTION_URL);
 
   printCleanupInstructions(ui);
 };
