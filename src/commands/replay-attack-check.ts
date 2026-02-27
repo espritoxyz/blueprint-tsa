@@ -148,6 +148,7 @@ export const runReplayAttackCheckAnalysis = async (
       reportDir,
       ...(verbose ? ["-v"] : []),
       "--continue-on-contract-exception",
+      "--disable-out-message-analysis",
     ],
     completionMessage,
   );
