@@ -2,7 +2,7 @@ import yargs from "yargs";
 import { Args, UIProvider } from "@ton/blueprint";
 import { createDrainCheckCommand } from "./commands/drain-check.js";
 import { configureCleanCommand } from "./commands/clean.js";
-import { configureOwnerHijackCommand } from "./commands/owner-hijack-check.js";
+import { createOwnerHijackCheckCommand } from "./commands/owner-hijack-check.js";
 import { configureReproduceCommand } from "./commands/reproduce.js";
 import { configureReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
 import { configureOpcodeInfoCommand } from "./commands/opcode-info.js";
@@ -32,7 +32,6 @@ export const createCLI = (context: CommandContext) => {
   const replayAttackCheckConfig = configureReplayAttackCheckCommand(context);
   const cleanConfig = configureCleanCommand();
   const reproduceCommand = configureReproduceCommand(context);
-  const ownerHijackConfig = configureOwnerHijackCommand(context);
   const opcodeInfoConfig = configureOpcodeInfoCommand(context);
   const auditConfig = configureAuditCommand(context);
   const bounceCheckConfig = configureBounceCheckCommand(context);
@@ -40,6 +39,7 @@ export const createCLI = (context: CommandContext) => {
   return yargs(argv)
     .scriptName("tsa")
     .command(createDrainCheckCommand(context))
+    .command(createOwnerHijackCheckCommand(context))
     .command(
       replayAttackCheckConfig.command,
       replayAttackCheckConfig.description,
@@ -51,12 +51,6 @@ export const createCLI = (context: CommandContext) => {
       cleanConfig.description,
       cleanConfig.builder,
       cleanConfig.handler,
-    )
-    .command(
-      ownerHijackConfig.command,
-      ownerHijackConfig.description,
-      ownerHijackConfig.builder,
-      ownerHijackConfig.handler,
     )
     .command(
       reproduceCommand.command,

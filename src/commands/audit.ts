@@ -250,13 +250,11 @@ async function runOwnerHijackCheck(
   const methodId = BigInt(getMethodId(methodName));
 
   const analyzer = await runOwnerHijackCheckAnalysis(
+    ui,
     contractName,
     contractPath,
-    ui,
-    timeout,
     methodId,
-    opcodes,
-    verbose,
+    { timeout, opcodes, verbose },
     `${OWNER_HIJACK_CHECK_NAME} completed.`,
   );
 
