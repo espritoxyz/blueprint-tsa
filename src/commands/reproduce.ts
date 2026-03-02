@@ -21,22 +21,34 @@ import {
 } from "../common/constants.js";
 import { printCleanupInstructions } from "../reproduce/utils.js";
 import { CommandContext } from "../cli.js";
-import { Argv } from "yargs";
+import { CommandModule, InferredOptionTypes } from "yargs";
 import { TsaVulnerabilityConfigSchema } from "../reproduce/reproduce-config.js";
 import { nanotonToTon } from "../common/format-utils.js";
 
-export const configureReproduceCommand = (context: CommandContext): any => ({
-  command: REPRODUCE_ID,
-  description: "Reproduce found vulnerability",
-  builder: (yargs: Argv) =>
-    yargs.option("config", {
-      alias: "c",
-      type: "string",
-      description: "Path to the reproduction config",
-      demandOption: true,
-    }),
-  handler: async (argv: any) => await executeReproduceCommand(context, argv),
-});
+const reproduceCommandOptions = {
+  config: {
+    alias: "c",
+    type: "string",
+    describe: "Path to the reproduction config",
+  },
+} as const;
+
+type ReproduceCommandSchema = InferredOptionTypes<
+  typeof reproduceCommandOptions
+>;
+
+export function createReproduceCommand(
+  context: CommandContext,
+): CommandModule<object, ReproduceCommandSchema> {
+  return {
+    command: REPRODUCE_ID,
+    describe: "Reproduce found vulnerability",
+    builder: reproduceCommandOptions,
+    handler: async (argv: ReproduceCommandSchema) => {
+      await executeReproduceCommand(context, argv);
+    },
+  };
+}
 
 async function checkAddressContainsExpectedData(
   network: NetworkProvider,
@@ -69,7 +81,7 @@ async function checkAddressContainsExpectedData(
 
 export const executeReproduceCommand = async (
   context: CommandContext,
-  parsedArgs: any,
+  parsedArgs: ReproduceCommandSchema,
 ) => {
   const { ui } = context;
   const reproduceConfigPath = parsedArgs.config;

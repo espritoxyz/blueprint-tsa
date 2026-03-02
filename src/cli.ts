@@ -3,9 +3,9 @@ import { Args, UIProvider } from "@ton/blueprint";
 import { createDrainCheckCommand } from "./commands/drain-check.js";
 import { createCleanCommand } from "./commands/clean.js";
 import { createOwnerHijackCheckCommand } from "./commands/owner-hijack-check.js";
-import { configureReproduceCommand } from "./commands/reproduce.js";
+import { createReproduceCommand } from "./commands/reproduce.js";
 import { createReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
-import { configureOpcodeInfoCommand } from "./commands/opcode-info.js";
+import { createOpcodeInfoCommand } from "./commands/opcode-info.js";
 import { createAuditCommand } from "./commands/audit.js";
 import { createBounceCheckCommand } from "./commands/bounce-check.js";
 
@@ -29,8 +29,6 @@ export const createCLI = (context: CommandContext) => {
 
   const argv = args._.slice(1);
 
-  const reproduceCommand = configureReproduceCommand(context);
-  const opcodeInfoConfig = configureOpcodeInfoCommand(context);
   return yargs(argv)
     .scriptName("tsa")
     .command(createDrainCheckCommand(context))
@@ -38,18 +36,8 @@ export const createCLI = (context: CommandContext) => {
     .command(createReplayAttackCheckCommand(context))
     .command(createBounceCheckCommand(context))
     .command(createCleanCommand())
-    .command(
-      reproduceCommand.command,
-      reproduceCommand.description,
-      reproduceCommand.builder,
-      reproduceCommand.handler,
-    )
-    .command(
-      opcodeInfoConfig.command,
-      opcodeInfoConfig.description,
-      opcodeInfoConfig.builder,
-      opcodeInfoConfig.handler,
-    )
+    .command(createReproduceCommand(context))
+    .command(createOpcodeInfoCommand(context))
     .command(createAuditCommand(context))
     .demandCommand(1, "Please specify a subcommand")
     .help()

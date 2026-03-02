@@ -1,7 +1,6 @@
-import { Argv } from "yargs";
-import yargs from "yargs";
+import { CommandModule, InferredOptionTypes } from "yargs";
 import path from "path";
-import { CommandContext, CommandHandler } from "../cli.js";
+import { CommandContext } from "../cli.js";
 import {
   OPCODE_INFO,
   Sym,
@@ -31,6 +30,41 @@ export interface OpcodeInfo {
   withAuthorization: boolean;
   vulnerabilityPath?: string;
 }
+
+const opcodeInfoOptions = {
+  contract: {
+    alias: "c",
+    type: "string",
+    description: "Contract name",
+    demandOption: true,
+  },
+  timeout: {
+    alias: "t",
+    type: "number",
+    description: "Timeout in seconds for analyzing one opcode",
+    default: 60,
+  },
+  verbose: {
+    alias: "v",
+    type: "boolean",
+    description: "Use debug output in TSA log",
+  },
+} as const;
+
+type OpcodeInfoSchema = InferredOptionTypes<typeof opcodeInfoOptions>;
+
+export const createOpcodeInfoCommand = (
+  context: CommandContext,
+): CommandModule<object, OpcodeInfoSchema> => {
+  return {
+    command: OPCODE_INFO,
+    describe: "Display information about contract opcodes",
+    builder: opcodeInfoOptions,
+    handler: async (argv: OpcodeInfoSchema) => {
+      await opcodeInfoHandler(context, argv);
+    },
+  };
+};
 
 export async function runOpcodeAuthorizationCheckAnalysis(
   opcode: number,
@@ -197,9 +231,9 @@ export function formatOpcodeInfo(infos: OpcodeInfo[]): string {
   return lines.join("\n");
 }
 
-const opcodeInfoHandler: CommandHandler = async (
+const opcodeInfoHandler = async (
   context: CommandContext,
-  args: yargs.ArgumentsCamelCase,
+  args: OpcodeInfoSchema,
 ) => {
   const { ui } = context;
   const { timeout, contract, verbose } = args;
@@ -236,33 +270,4 @@ const opcodeInfoHandler: CommandHandler = async (
   ui.write("");
   const output = formatOpcodeInfo(infos);
   ui.write(output);
-};
-
-export const configureOpcodeInfoCommand = (context: CommandContext) => {
-  return {
-    command: OPCODE_INFO,
-    description: "Display information about contract opcodes",
-    builder: (yargs: Argv) =>
-      yargs
-        .option("contract", {
-          alias: "c",
-          type: "string",
-          description: "Contract name",
-          demandOption: true,
-        })
-        .option("timeout", {
-          alias: "t",
-          type: "number",
-          description: "Timeout in seconds for analyzing one opcode",
-          default: 60,
-        })
-        .option("verbose", {
-          alias: "v",
-          type: "boolean",
-          description: "Use debug output in TSA log",
-        }),
-    handler: async (argv: yargs.ArgumentsCamelCase) => {
-      await opcodeInfoHandler(context, argv);
-    },
-  };
 };
