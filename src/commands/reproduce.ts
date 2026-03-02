@@ -130,12 +130,12 @@ export const executeReproduceCommand = async (
       balance: contractState.balance,
       contractAddress: address,
       senderAddress,
-      ui,
       timeout: configJson.timeout,
       concreteCheckerOptions: configJson.concreteCheckerOptions,
     };
 
     const vulnerability = await runConcreteAnalysis(
+      ui,
       configJson.command,
       concreteAnalysisConfig,
     );

@@ -4,7 +4,7 @@ import path from "path";
 import { compileFunc } from "@ton-community/func-js";
 import { Sym } from "./constants.js";
 
-export const buildContracts = async (ui: UIProvider) => {
+export const buildAllContracts = async (ui: UIProvider) => {
   ui.setActionPrompt(`${Sym.WAIT} Compiling contracts...`);
   try {
     await buildAll(ui);

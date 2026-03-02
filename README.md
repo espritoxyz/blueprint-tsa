@@ -13,7 +13,7 @@ yarn add blueprint-tsa
 2. Add this configuration to `blueprint.config.ts`:
 
 ```ts
-import {TsaPlugin} from "blueprint-tsa";
+import { TsaPlugin } from "blueprint-tsa";
 
 export const config = {
   plugins: [new TsaPlugin()],

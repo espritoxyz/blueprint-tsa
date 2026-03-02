@@ -16,47 +16,34 @@ import {
   ERROR_EXIT_CODE,
   DRAIN_DESCRIPTION_URL,
 } from "../common/constants.js";
-import { buildContracts } from "../common/build-utils.js";
+import { buildAllContracts } from "../common/build-utils.js";
 import {
-  printCleanupInstructions,
-  printReproductionInstructions,
-} from "../reproduce/utils.js";
-import {
-  findCompiledContract,
   getCheckerPath,
   getSarifReportPath,
   getReportDirectory,
 } from "../common/paths.js";
-import { extractOpcodes } from "../common/opcode-extractor.js";
 import {
+  commonAnalyzerOptions,
   CommonAnalyzerOptions,
   generateFlagsFromCommonOptions,
+  generateOptionsForPropertyTree,
 } from "./common-analyzer-options.js";
-
-const ONE_MINUTE_SECONDS = 60;
+import {
+  resolveBuiltContract,
+  resolveOpcodesAndTimeout,
+  reportAndExit,
+  readNanotons,
+} from "./command-utils.js";
+import { read } from "node:fs";
 
 const drainCheckOptions = {
-  timeout: {
-    alias: "t",
-    type: "number",
-    description: "Analysis timeout in seconds",
-  },
   contract: {
     alias: "c",
     type: "string",
     description: "Contract name",
     demandOption: true,
   },
-  "disable-opcode-extraction": {
-    type: "boolean",
-    description:
-      "Disable opcode extraction. This affects path selection strategy and default timeout.",
-  },
-  verbose: {
-    alias: "v",
-    type: "boolean",
-    description: "Use debug output in TSA log",
-  },
+  ...commonAnalyzerOptions,
 } as const;
 
 type DrainCheckSchema = InferredOptionTypes<typeof drainCheckOptions>;
@@ -69,24 +56,24 @@ export const createDrainCheckCommand = (
     describe: "Analyze contract for drain vulnerabilities",
     builder: drainCheckOptions,
     handler: async (argv: DrainCheckSchema) => {
-      await drainCheckCommand(context, argv);
+      await drainCheckCommand(context.ui, argv);
     },
   };
 };
 
 /**
  * Runs drain check analysis and returns the analyzer wrapper
+ * @param ui - UI provider
  * @param contractName - Name of the contract
  * @param contractPath - Path to the compiled contract
- * @param ui - UI provider
  * @param commonOptions
  * @param completionMessage
  * @returns AnalyzerWrapper instance
  */
 export const runDrainCheckAnalysis = async (
+  ui: UIProvider,
   contractName: string,
   contractPath: string,
-  ui: UIProvider,
   commonOptions: CommonAnalyzerOptions,
   completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
@@ -98,15 +85,7 @@ export const runDrainCheckAnalysis = async (
     {
       key: "Options",
       separator: true,
-      children: [
-        {
-          key: "Timeout",
-          value:
-            commonOptions.timeout !== null
-              ? `${commonOptions.timeout} seconds`
-              : "not set",
-        },
-      ],
+      children: [...generateOptionsForPropertyTree(commonOptions)],
     },
   ];
   const analyzer = new AnalyzerWrapper({
@@ -141,7 +120,7 @@ export const runDrainCheckAnalysis = async (
   );
 
   // Write reproduction config if vulnerability is found
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
   if (vulnerability) {
     writeReproduceConfig(
       vulnerability,
@@ -158,64 +137,37 @@ export const runDrainCheckAnalysis = async (
 };
 
 const drainCheckCommand = async (
-  context: CommandContext,
+  ui: UIProvider,
   parsedArgs: DrainCheckSchema,
 ) => {
-  const { ui } = context;
+  const contractName = parsedArgs.contract;
 
-  await buildContracts(ui);
-  const contract = parsedArgs.contract;
-  const contractPath = findCompiledContract(contract);
+  await buildAllContracts(ui);
+  const contractPath = resolveBuiltContract(ui, contractName);
 
-  if (!existsSync(contractPath)) {
-    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
-    process.exit(1);
-  }
+  const { opcodes, timeout } = await resolveOpcodesAndTimeout(
+    ui,
+    contractName,
+    contractPath,
+    {
+      disableOpcodeExtraction: parsedArgs["disable-opcode-extraction"],
+      explicitTimeout: parsedArgs.timeout,
+    },
+  );
 
-  let opcodes: number[] = [];
-  if (!parsedArgs["disable-opcode-extraction"]) {
-    opcodes = await extractOpcodes({
-      ui,
-      codePath: contractPath,
-      contractName: contract,
-    });
-  }
-
-  let timeout = parsedArgs.timeout ?? null;
-
-  // If timeout wasn't provided, set it to 1 minute * (number_of_opcodes + 1)
-  if (timeout === null && opcodes.length > 0) {
-    timeout = ONE_MINUTE_SECONDS * (opcodes.length + 1);
-    ui.write("");
-    ui.write(
-      "The timeout was calculated automatically based on the number of opcodes.",
-    );
-  }
-
-  const analyzer = await runDrainCheckAnalysis(contract, contractPath, ui, {
+  const analyzer = await runDrainCheckAnalysis(ui, contractName, contractPath, {
     timeout,
     opcodes,
     verbose: parsedArgs.verbose,
   });
-
-  const vulnerability = analyzer.getVulnerability();
-  analyzer.reportVulnerability(vulnerability, DRAIN_DESCRIPTION_URL);
-
-  printCleanupInstructions(ui);
-
-  if (vulnerability != null) {
-    printReproductionInstructions(ui, analyzer.id);
-
-    process.exit(2);
-  }
+  reportAndExit(ui, analyzer, DRAIN_DESCRIPTION_URL);
 };
 
 export const drainCheckConcrete = async (
+  ui: UIProvider,
   config: ConcreteAnalysisConfig,
-  completionMessage: string = "Analysis complete.",
+  completionMessage: string = "Analysis complete",
 ): Promise<ReproduceParameters | null> => {
-  const { ui } = config;
-
   if (!existsSync(config.codePath)) {
     ui.write(`\n${Sym.ERR} Code at ${config.codePath} not found`);
     process.exit(1);
@@ -239,8 +191,9 @@ export const drainCheckConcrete = async (
     },
   ];
 
-  const maxTons = toNano(
-    await ui.input("Enter maximum amount of TONs for reproduction message:"),
+  const maxTons = await readNanotons(
+    "Enter maximum amount of TONs for reproduction message:",
+    ui,
   );
 
   const checkerPath = getCheckerPath(DRAIN_CHECK_CONCRETE_FILENAME);
@@ -286,7 +239,7 @@ export const drainCheckConcrete = async (
     completionMessage,
   );
 
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
   if (vulnerability == null) {
     ui.write(
       `${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`,

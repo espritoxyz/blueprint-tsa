@@ -12,7 +12,7 @@ import {
   ERROR_EXIT_CODE,
   REPLAY_DESCRIPTION_URL,
 } from "../common/constants.js";
-import { buildContracts } from "../common/build-utils.js";
+import { buildAllContracts } from "../common/build-utils.js";
 import { printCleanupInstructions } from "../reproduce/utils.js";
 import {
   findCompiledContract,
@@ -162,7 +162,7 @@ const replayAttackCheckCommand: CommandHandler = async (
 ) => {
   const { ui } = context;
 
-  await buildContracts(ui);
+  await buildAllContracts(ui);
 
   if (!parsedArgs.contract) {
     throw new Error("Contract name or path is required");
@@ -205,7 +205,7 @@ const replayAttackCheckCommand: CommandHandler = async (
     seqnoData,
   );
 
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
 
   analyzer.reportVulnerability(vulnerability, REPLAY_DESCRIPTION_URL);
 

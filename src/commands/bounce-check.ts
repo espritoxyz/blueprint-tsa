@@ -16,7 +16,7 @@ import {
   BOUNCE_DESCRIPTION_URL,
 } from "../common/constants.js";
 import {
-  buildContracts,
+  buildAllContracts,
   compileFuncFileToBase64Boc,
 } from "../common/build-utils.js";
 import { doWithTemporaryFile } from "../common/file-utils.js";
@@ -168,7 +168,7 @@ const bounceCheckCommand: CommandHandler = async (
 ) => {
   const { ui } = context;
 
-  await buildContracts(ui);
+  await buildAllContracts(ui);
 
   if (!parsedArgs.contract) {
     throw new Error("Contract name or path is required");
@@ -210,7 +210,7 @@ const bounceCheckCommand: CommandHandler = async (
     parsedArgs.verbose,
   );
 
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
 
   analyzer.reportVulnerability(vulnerability, BOUNCE_DESCRIPTION_URL);
 

@@ -202,7 +202,7 @@ export class AnalyzerWrapper {
     }
   }
 
-  getVulnerability(): VulnerabilityDescription | null {
+  getVulnerabilityFromReport(): VulnerabilityDescription | null {
     const sarifPath = getSarifReportPath(this.id);
     const index = findExploitExecutionIndex(sarifPath);
     if (index === undefined) {

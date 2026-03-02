@@ -19,7 +19,7 @@ import {
   OWNER_HIJACK_DESCRIPTION_URL,
   BOUNCE_DESCRIPTION_URL,
 } from "../common/constants.js";
-import { buildContracts } from "../common/build-utils.js";
+import { buildAllContracts } from "../common/build-utils.js";
 import {
   findCompiledContract,
   findTSAReportsDirectory,
@@ -191,9 +191,9 @@ async function runDrainCheck(
   verbose: boolean,
 ): Promise<CheckResult> {
   const analyzer = await runDrainCheckAnalysis(
+    ui,
     contractName,
     contractPath,
-    ui,
     {
       timeout,
       opcodes,
@@ -402,7 +402,7 @@ const auditHandler: CommandHandler = async (
   const { timeout, contract, ownerMethod, disableOpcodeExtraction, verbose } =
     args;
 
-  await buildContracts(ui);
+  await buildAllContracts(ui);
   const contractPath = findCompiledContract(contract as string);
 
   if (!existsSync(contractPath)) {

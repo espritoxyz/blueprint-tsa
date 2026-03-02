@@ -13,7 +13,7 @@ import {
   Sym,
   OWNER_HIJACK_DESCRIPTION_URL,
 } from "../common/constants.js";
-import { buildContracts } from "../common/build-utils.js";
+import { buildAllContracts } from "../common/build-utils.js";
 import {
   printCleanupInstructions,
   printReproductionInstructions,
@@ -29,6 +29,7 @@ import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
 import { ReproduceParameters } from "../reproduce/network.js";
 import { OwnerHijackOptions } from "../reproduce/reproduce-config.js";
 import { extractOpcodes } from "../common/opcode-extractor.js";
+import { readNanotons } from "./command-utils.js";
 
 const ONE_MINUTE_SECONDS = 60;
 
@@ -181,7 +182,7 @@ export const runOwnerHijackCheckAnalysis = async (
   );
 
   // Write reproduction config if vulnerability is found
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
   if (vulnerability) {
     writeReproduceConfig(
       vulnerability,
@@ -203,7 +204,7 @@ const ownerHijackCommand: CommandHandler = async (
   parsedArgs: any,
 ) => {
   const { ui } = context;
-  await buildContracts(ui);
+  await buildAllContracts(ui);
   const { options, properties } = extractOptions(ui, parsedArgs);
 
   const contractPath = findCompiledContract(options.contract);
@@ -249,7 +250,7 @@ const ownerHijackCommand: CommandHandler = async (
     parsedArgs.verbose,
   );
 
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
   analyzer.reportVulnerability(vulnerability, OWNER_HIJACK_DESCRIPTION_URL);
 
   printCleanupInstructions(ui);
@@ -261,30 +262,12 @@ const ownerHijackCommand: CommandHandler = async (
   }
 };
 
-const readNanotons = async (
-  request: string,
-  ui: UIProvider,
-): Promise<bigint> => {
-  while (true) {
-    const userInput = await ui.input(request);
-    try {
-      return toNano(userInput);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
-      ui.write(
-        `Your input (${userInput}) was of not correct nanoton format. Please try again.`,
-      );
-    }
-  }
-};
-
 export const ownerHijackCheckConcrete = async (
+  ui: UIProvider,
   config: ConcreteAnalysisConfig,
   concreteCheckerOptions: OwnerHijackOptions,
   completionMessage: string = "Analysis complete.",
 ): Promise<ReproduceParameters | null> => {
-  const { ui } = config;
-
   if (!existsSync(config.codePath)) {
     ui.write(`\n${Sym.ERR} Code at ${config.codePath} not found`);
     process.exit(1);
@@ -378,7 +361,7 @@ export const ownerHijackCheckConcrete = async (
     completionMessage,
   );
 
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
   if (vulnerability == null) {
     ui.write(
       `${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`,

@@ -11,7 +11,7 @@ import {
 } from "../common/constants.js";
 import { UIProvider } from "@ton/blueprint";
 import { extractOpcodes } from "../common/opcode-extractor.js";
-import { buildContracts } from "../common/build-utils.js";
+import { buildAllContracts } from "../common/build-utils.js";
 import {
   findCompiledContract,
   getSarifReportPath,
@@ -106,7 +106,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
   const withAuthorization = !vulnerability;
   let vulnerabilityPath: string | undefined;
   if (vulnerability) {
-    const vulnDesc = analyzer.getVulnerability();
+    const vulnDesc = analyzer.getVulnerabilityFromReport();
     if (vulnDesc) {
       vulnerabilityPath = getInputsPath(analyzer.id, vulnDesc.executionIndex);
     }
@@ -204,7 +204,7 @@ const opcodeInfoHandler: CommandHandler = async (
   const { ui } = context;
   const { timeout, contract, verbose } = args;
 
-  await buildContracts(ui);
+  await buildAllContracts(ui);
   const codePath = findCompiledContract(contract as string);
 
   if (!existsSync(codePath)) {
