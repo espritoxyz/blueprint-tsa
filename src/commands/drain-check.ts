@@ -1,9 +1,9 @@
-import yargs, { Argv } from "yargs";
+import { CommandModule, InferredOptionTypes } from "yargs";
 import { existsSync } from "fs";
 import { beginCell, toNano } from "@ton/core";
 import { UIProvider } from "@ton/blueprint";
 import { TreeProperty } from "../common/draw.js";
-import { CommandHandler, CommandContext } from "../cli.js";
+import { CommandContext } from "../cli.js";
 import { ReproduceParameters } from "../reproduce/network.js";
 import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
@@ -28,37 +28,47 @@ import {
   getReportDirectory,
 } from "../common/paths.js";
 import { extractOpcodes } from "../common/opcode-extractor.js";
+import {
+  CommonAnalyzerOptions,
+  generateFlagsFromCommonOptions,
+} from "./common-analyzer-options.js";
 
 const ONE_MINUTE_SECONDS = 60;
 
-export const configureDrainCheckCommand = (context: CommandContext) => {
+const drainCheckOptions = {
+  timeout: {
+    alias: "t",
+    type: "number",
+    description: "Analysis timeout in seconds",
+  },
+  contract: {
+    alias: "c",
+    type: "string",
+    description: "Contract name",
+    demandOption: true,
+  },
+  "disable-opcode-extraction": {
+    type: "boolean",
+    description:
+      "Disable opcode extraction. This affects path selection strategy and default timeout.",
+  },
+  verbose: {
+    alias: "v",
+    type: "boolean",
+    description: "Use debug output in TSA log",
+  },
+} as const;
+
+type DrainCheckSchema = InferredOptionTypes<typeof drainCheckOptions>;
+
+export const createDrainCheckCommand = (
+  context: CommandContext,
+): CommandModule<object, DrainCheckSchema> => {
   return {
     command: DRAIN_CHECK_ID,
-    description: "Analyze contract for drain vulnerabilities",
-    builder: (yargs: Argv) =>
-      yargs
-        .option("timeout", {
-          alias: "t",
-          type: "number",
-          description: "Analysis timeout in seconds",
-        })
-        .option("contract", {
-          alias: "c",
-          type: "string",
-          description: "Contract name",
-          demandOption: true,
-        })
-        .option("verbose", {
-          alias: "v",
-          type: "boolean",
-          description: "Use debug output in TSA log",
-        })
-        .option("disable-opcode-extraction", {
-          type: "boolean",
-          description:
-            "Disable opcode extraction. This affects path selection strategy and default timeout.",
-        }),
-    handler: async (argv: yargs.ArgumentsCamelCase) => {
+    describe: "Analyze contract for drain vulnerabilities",
+    builder: drainCheckOptions,
+    handler: async (argv: DrainCheckSchema) => {
       await drainCheckCommand(context, argv);
     },
   };
@@ -69,19 +79,16 @@ export const configureDrainCheckCommand = (context: CommandContext) => {
  * @param contractName - Name of the contract
  * @param contractPath - Path to the compiled contract
  * @param ui - UI provider
- * @param timeout - Analysis timeout in seconds
- * @param opcodes - List of opcodes to analyze
- * @param verbose - Enable verbose output
+ * @param commonOptions
+ * @param completionMessage
  * @returns AnalyzerWrapper instance
  */
 export const runDrainCheckAnalysis = async (
   contractName: string,
   contractPath: string,
   ui: UIProvider,
-  timeout: number | null,
-  opcodes: number[],
-  verbose: boolean = false,
-  completionMessage: string = "Analysis complete.",
+  commonOptions: CommonAnalyzerOptions,
+  completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
 
@@ -94,22 +101,21 @@ export const runDrainCheckAnalysis = async (
       children: [
         {
           key: "Timeout",
-          value: timeout !== null ? `${timeout} seconds` : "not set",
+          value:
+            commonOptions.timeout !== null
+              ? `${commonOptions.timeout} seconds`
+              : "not set",
         },
       ],
     },
   ];
-
-  const checkerCell = beginCell().endCell();
-
   const analyzer = new AnalyzerWrapper({
     ui,
     checkerPath,
-    checkerCell,
+    checkerCell: beginCell().endCell(),
     properties,
     codePath: contractPath,
   });
-
   const reportDir = getReportDirectory(analyzer.id);
   const sarifPath = getSarifReportPath(analyzer.id);
 
@@ -127,11 +133,9 @@ export const runDrainCheckAnalysis = async (
       wrapper.getTempCheckerCellPath(),
       "--output",
       sarifPath,
-      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
       "--exported-inputs",
       reportDir,
-      ...(verbose ? ["-v"] : []),
-      ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
+      ...generateFlagsFromCommonOptions(commonOptions),
     ],
     completionMessage,
   );
@@ -139,25 +143,27 @@ export const runDrainCheckAnalysis = async (
   // Write reproduction config if vulnerability is found
   const vulnerability = analyzer.getVulnerability();
   if (vulnerability) {
-    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {
-      kind: DRAIN_CHECK_ID,
-    });
+    writeReproduceConfig(
+      vulnerability,
+      DRAIN_CHECK_ID,
+      commonOptions.timeout,
+      analyzer.id,
+      {
+        kind: DRAIN_CHECK_ID,
+      },
+    );
   }
 
   return analyzer;
 };
 
-const drainCheckCommand: CommandHandler = async (
+const drainCheckCommand = async (
   context: CommandContext,
-  parsedArgs: any,
+  parsedArgs: DrainCheckSchema,
 ) => {
   const { ui } = context;
 
   await buildContracts(ui);
-
-  if (!parsedArgs.contract) {
-    throw new Error("Contract name or path is required");
-  }
   const contract = parsedArgs.contract;
   const contractPath = findCompiledContract(contract);
 
@@ -186,14 +192,11 @@ const drainCheckCommand: CommandHandler = async (
     );
   }
 
-  const analyzer = await runDrainCheckAnalysis(
-    contract,
-    contractPath,
-    ui,
+  const analyzer = await runDrainCheckAnalysis(contract, contractPath, ui, {
     timeout,
     opcodes,
-    parsedArgs.verbose,
-  );
+    verbose: parsedArgs.verbose,
+  });
 
   const vulnerability = analyzer.getVulnerability();
   analyzer.reportVulnerability(vulnerability, DRAIN_DESCRIPTION_URL);

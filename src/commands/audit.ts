@@ -194,9 +194,11 @@ async function runDrainCheck(
     contractName,
     contractPath,
     ui,
-    timeout,
-    opcodes,
-    verbose,
+    {
+      timeout,
+      opcodes,
+      verbose,
+    },
     `${DRAIN_CHECK_NAME} completed.`,
   );
 
