@@ -14,6 +14,8 @@ const findExecutionByMessage = (
   const results = parsedObject.runs[0].results || [];
 
   const index = results.findIndex(
+    // TODO add the proper parsing of SARIF
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (result: any) => result.message?.text === expectedMessage,
   );
 

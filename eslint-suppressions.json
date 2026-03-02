@@ -1,17 +1,1 @@
-{
-  "src/commands/audit.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/common/build-utils.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/common/result-parsing.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  }
-}
+{}

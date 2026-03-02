@@ -10,7 +10,7 @@ export const buildAllContracts = async (ui: UIProvider) => {
     await buildAll(ui);
   } catch (e) {
     ui.clearActionPrompt();
-    ui.write((e as any).toString());
+    ui.write(String(e));
     ui.write(`\n${Sym.ERR} Failed to compile one of the files`);
     ui.write(
       "Please make sure you can run `blueprint build --all` successfully before running TSA.",

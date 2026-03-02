@@ -45,6 +45,7 @@ import {
   CommonAnalyzerOptions,
   commonAnalyzerOptions,
 } from "./common-analyzer-options.js";
+import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 
 const ONE_MINUTE_SECONDS = 60;
 
@@ -130,7 +131,7 @@ function getCheckDescriptionUrl(checkName: string): string | undefined {
 
 function buildCheckResult(
   checkName: string,
-  analyzer: any,
+  analyzer: AnalyzerWrapper,
   passedMessage: string,
   failedMessage: string,
   contractName: string,
@@ -151,7 +152,7 @@ function buildCheckResult(
   };
 
   if (vulnerability) {
-    const vulnDesc = analyzer.getVulnerability();
+    const vulnDesc = analyzer.getVulnerabilityFromReport();
     if (vulnDesc) {
       result.vulnerabilityPath = getInputsPath(
         analyzer.id,
