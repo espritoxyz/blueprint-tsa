@@ -1,4 +1,5 @@
 import { TreeProperty } from "../common/draw.js";
+import { Options } from "yargs";
 
 export interface CommonAnalyzerOptions {
   timeout: number | null;
@@ -51,4 +52,4 @@ export const commonAnalyzerOptions = {
     type: "boolean",
     description: "Use debug output in TSA log",
   },
-} as const;
+} as const satisfies Record<string, Options>;

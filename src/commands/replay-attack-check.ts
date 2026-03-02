@@ -1,4 +1,4 @@
-import { CommandModule, InferredOptionTypes } from "yargs";
+import { CommandModule, InferredOptionTypes, Options } from "yargs";
 import { beginCell, getMethodId } from "@ton/core";
 import { UIProvider } from "@ton/blueprint";
 import { TreeProperty } from "../common/draw.js";
@@ -50,7 +50,7 @@ const replayAttackCheckOptions = {
     demandOption: false,
   },
   ...commonAnalyzerOptions,
-} as const;
+} as const satisfies Record<string, Options>;
 
 type ReplayAttackCheckSchema = InferredOptionTypes<
   typeof replayAttackCheckOptions

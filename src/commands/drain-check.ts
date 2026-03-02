@@ -1,4 +1,4 @@
-import { CommandModule, InferredOptionTypes } from "yargs";
+import { CommandModule, InferredOptionTypes, Options } from "yargs";
 import { existsSync } from "fs";
 import { beginCell } from "@ton/core";
 import { UIProvider } from "@ton/blueprint";
@@ -43,7 +43,7 @@ const drainCheckOptions = {
     demandOption: true,
   },
   ...commonAnalyzerOptions,
-} as const;
+} as const satisfies Record<string, Options>;
 
 type DrainCheckSchema = InferredOptionTypes<typeof drainCheckOptions>;
 

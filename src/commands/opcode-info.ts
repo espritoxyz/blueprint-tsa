@@ -1,4 +1,4 @@
-import { CommandModule, InferredOptionTypes } from "yargs";
+import { CommandModule, InferredOptionTypes, Options } from "yargs";
 import path from "path";
 import { CommandContext } from "../cli.js";
 import {
@@ -49,7 +49,7 @@ const opcodeInfoOptions = {
     type: "boolean",
     description: "Use debug output in TSA log",
   },
-} as const;
+} as const satisfies Record<string, Options>;
 
 type OpcodeInfoSchema = InferredOptionTypes<typeof opcodeInfoOptions>;
 

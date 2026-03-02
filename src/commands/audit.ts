@@ -1,4 +1,4 @@
-import { CommandModule, InferredOptionTypes } from "yargs";
+import { CommandModule, InferredOptionTypes, Options } from "yargs";
 import { existsSync, writeFileSync } from "fs";
 import path from "path";
 import { CommandContext } from "../cli.js";
@@ -78,7 +78,7 @@ const auditOptions = {
       "The method name of get_owner getter (optional, enables owner hijack check)",
   },
   ...commonAnalyzerOptions,
-} as const;
+} as const satisfies Record<string, Options>;
 
 type AuditSchema = InferredOptionTypes<typeof auditOptions>;
 
