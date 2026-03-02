@@ -42,6 +42,10 @@ import {
   formatOpcodeInfo,
   OpcodeInfo,
 } from "./opcode-info.js";
+import {
+  CommonAnalyzerOptions,
+  commonAnalyzerOptions,
+} from "./common-analyzer-options.js";
 
 const ONE_MINUTE_SECONDS = 60;
 
@@ -186,19 +190,13 @@ async function runDrainCheck(
   contractName: string,
   contractPath: string,
   ui: UIProvider,
-  timeout: number | null,
-  opcodes: number[],
-  verbose: boolean,
+  commonOptions: CommonAnalyzerOptions,
 ): Promise<CheckResult> {
   const analyzer = await runDrainCheckAnalysis(
     ui,
     contractName,
     contractPath,
-    {
-      timeout,
-      opcodes,
-      verbose,
-    },
+    commonOptions,
     `${DRAIN_CHECK_NAME} completed.`,
   );
 
@@ -208,7 +206,7 @@ async function runDrainCheck(
     "No drain vulnerabilities detected",
     "Vulnerability found - contract may be vulnerable to drain attacks",
     contractName,
-    timeout,
+    commonOptions.timeout,
   );
 }
 
@@ -242,10 +240,8 @@ async function runOwnerHijackCheck(
   contractName: string,
   contractPath: string,
   ui: UIProvider,
-  timeout: number | null,
   methodName: string,
-  opcodes: number[],
-  verbose: boolean,
+  commonOptions: CommonAnalyzerOptions,
 ): Promise<CheckResult> {
   const methodId = BigInt(getMethodId(methodName));
 
@@ -254,7 +250,7 @@ async function runOwnerHijackCheck(
     contractName,
     contractPath,
     methodId,
-    { timeout, opcodes, verbose },
+    commonOptions,
     `${OWNER_HIJACK_CHECK_NAME} completed.`,
   );
 
@@ -264,7 +260,7 @@ async function runOwnerHijackCheck(
     "No owner hijack vulnerabilities detected",
     "Vulnerability found - contract owner may be hijackable",
     contractName,
-    timeout,
+    commonOptions.timeout,
     methodName,
   );
 }
@@ -273,19 +269,13 @@ async function runBounceCheck(
   contractName: string,
   contractPath: string,
   ui: UIProvider,
-  timeout: number | null,
-  opcodes: number[],
-  verbose: boolean,
+  commonOptions: CommonAnalyzerOptions,
 ): Promise<CheckResult> {
   const analyzer = await runBounceCheckAnalysis(
     ui,
     contractName,
     contractPath,
-    {
-      timeout,
-      opcodes,
-      verbose,
-    },
+    commonOptions,
     `${BOUNCE_CHECK_NAME} completed.`,
   );
 
@@ -295,7 +285,7 @@ async function runBounceCheck(
     "No bounce message handling vulnerabilities detected",
     "Vulnerability found - contract may not handle bounced messages correctly",
     contractName,
-    timeout,
+    commonOptions.timeout,
   );
 }
 
@@ -452,13 +442,16 @@ const auditHandler: CommandHandler = async (
   // Run drain-check
   ui.write("");
   ui.write(`${Sym.WAIT} Running drain check...`);
+  const commonAnalyzerOptions: CommonAnalyzerOptions = {
+    timeout: effectiveTimeout,
+    opcodes,
+    verbose: verbose as boolean,
+  };
   const drainResult = await runDrainCheck(
     contract as string,
     contractPath,
     ui,
-    effectiveTimeout,
-    opcodes,
-    verbose as boolean,
+    commonAnalyzerOptions,
   );
   summary.checks.push(drainResult);
 
@@ -481,9 +474,7 @@ const auditHandler: CommandHandler = async (
     contract as string,
     contractPath,
     ui,
-    effectiveTimeout,
-    opcodes,
-    verbose as boolean,
+    commonAnalyzerOptions,
   );
   summary.checks.push(bounceResult);
 
@@ -495,10 +486,8 @@ const auditHandler: CommandHandler = async (
       contract as string,
       contractPath,
       ui,
-      effectiveTimeout,
       ownerMethod as string,
-      opcodes,
-      verbose as boolean,
+      commonAnalyzerOptions,
     );
     summary.checks.push(ownerResult);
   } else {
@@ -529,28 +518,13 @@ export const configureAuditCommand = (context: CommandContext) => {
           description: "Contract name",
           demandOption: true,
         })
-        .option("timeout", {
-          alias: "t",
-          type: "number",
-          description:
-            "Analysis timeout in seconds per analyzer run (for opcode-info, divided by number of opcodes)",
-        })
         .option("owner-method", {
           alias: "m",
           type: "string",
           description:
             "The method name of get_owner getter (optional, enables owner hijack check)",
         })
-        .option("disable-opcode-extraction", {
-          type: "boolean",
-          description:
-            "Disable opcode extraction. This affects path selection strategy and default timeout.",
-        })
-        .option("verbose", {
-          alias: "v",
-          type: "boolean",
-          description: "Use debug output in TSA log",
-        }),
+        .options(commonAnalyzerOptions),
     handler: async (argv: yargs.ArgumentsCamelCase) => {
       await auditHandler(context, argv);
     },
