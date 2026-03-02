@@ -278,12 +278,14 @@ async function runBounceCheck(
   verbose: boolean,
 ): Promise<CheckResult> {
   const analyzer = await runBounceCheckAnalysis(
+    ui,
     contractName,
     contractPath,
-    ui,
-    timeout,
-    opcodes,
-    verbose,
+    {
+      timeout,
+      opcodes,
+      verbose,
+    },
     `${BOUNCE_CHECK_NAME} completed.`,
   );
 

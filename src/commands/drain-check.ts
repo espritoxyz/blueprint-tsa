@@ -1,6 +1,6 @@
 import { CommandModule, InferredOptionTypes } from "yargs";
 import { existsSync } from "fs";
-import { beginCell, toNano } from "@ton/core";
+import { beginCell } from "@ton/core";
 import { UIProvider } from "@ton/blueprint";
 import { TreeProperty } from "../common/draw.js";
 import { CommandContext } from "../cli.js";
@@ -34,7 +34,6 @@ import {
   reportAndExit,
   readNanotons,
 } from "./command-utils.js";
-import { read } from "node:fs";
 
 const drainCheckOptions = {
   contract: {
