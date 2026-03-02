@@ -6,7 +6,7 @@ import { createOwnerHijackCheckCommand } from "./commands/owner-hijack-check.js"
 import { configureReproduceCommand } from "./commands/reproduce.js";
 import { createReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
 import { configureOpcodeInfoCommand } from "./commands/opcode-info.js";
-import { configureAuditCommand } from "./commands/audit.js";
+import { createAuditCommand } from "./commands/audit.js";
 import { createBounceCheckCommand } from "./commands/bounce-check.js";
 
 export interface CommandContext {
@@ -32,8 +32,6 @@ export const createCLI = (context: CommandContext) => {
   const cleanConfig = configureCleanCommand();
   const reproduceCommand = configureReproduceCommand(context);
   const opcodeInfoConfig = configureOpcodeInfoCommand(context);
-  const auditConfig = configureAuditCommand(context);
-
   return yargs(argv)
     .scriptName("tsa")
     .command(createDrainCheckCommand(context))
@@ -58,12 +56,7 @@ export const createCLI = (context: CommandContext) => {
       opcodeInfoConfig.builder,
       opcodeInfoConfig.handler,
     )
-    .command(
-      auditConfig.command,
-      auditConfig.description,
-      auditConfig.builder,
-      auditConfig.handler,
-    )
+    .command(createAuditCommand(context))
     .demandCommand(1, "Please specify a subcommand")
     .help()
     .alias("help", "h")
