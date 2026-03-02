@@ -1,65 +1,70 @@
-import { Argv } from "yargs";
-import { existsSync } from "fs";
+import { CommandModule, InferredOptionTypes } from "yargs";
 import { beginCell, getMethodId } from "@ton/core";
 import { UIProvider } from "@ton/blueprint";
 import { TreeProperty } from "../common/draw.js";
-import { CommandHandler, CommandContext } from "../cli.js";
+import { CommandContext } from "../cli.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 import {
-  Sym,
   REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME,
   REPLAY_ATTACK_CHECK_ID,
   ERROR_EXIT_CODE,
   REPLAY_DESCRIPTION_URL,
+  Sym,
 } from "../common/constants.js";
 import { buildAllContracts } from "../common/build-utils.js";
-import { printCleanupInstructions } from "../reproduce/utils.js";
 import {
-  findCompiledContract,
   getCheckerPath,
   getSarifReportPath,
   getReportDirectory,
 } from "../common/paths.js";
+import {
+  commonAnalyzerOptions,
+  CommonAnalyzerOptions,
+  generateFlagsFromCommonOptions,
+  generateOptionsForPropertyTree,
+} from "./common-analyzer-options.js";
+import {
+  resolveBuiltContract,
+  resolveOpcodesAndTimeout,
+  reportAndExit,
+} from "./command-utils.js";
 
-export const configureReplayAttackCheckCommand = (
+const replayAttackCheckOptions = {
+  contract: {
+    alias: "c",
+    type: "string",
+    description: "Contract name",
+    demandOption: true,
+  },
+  "seqno-method-name": {
+    alias: "s",
+    type: "string",
+    description: "Method name of a seqno getter method",
+    demandOption: false,
+  },
+  "seqno-restriction": {
+    alias: "r",
+    type: "number",
+    description:
+      "The upper bound of a seqno. Only the seq numbers that satisfy the restrictions are considered in executions",
+    demandOption: false,
+  },
+  ...commonAnalyzerOptions,
+} as const;
+
+type ReplayAttackCheckSchema = InferredOptionTypes<
+  typeof replayAttackCheckOptions
+>;
+
+export const createReplayAttackCheckCommand = (
   context: CommandContext,
-): any => {
+): CommandModule<object, ReplayAttackCheckSchema> => {
   return {
     command: REPLAY_ATTACK_CHECK_ID,
-    description: "Analyze contract for replay attack vulnerabilities",
-    builder: (yargs: Argv) =>
-      yargs
-        .option("timeout", {
-          alias: "t",
-          type: "number",
-          description: "Analysis timeout in seconds",
-        })
-        .option("contract", {
-          alias: "c",
-          type: "string",
-          description: "Contract name",
-          demandOption: true,
-        })
-        .option("seqno-method-name", {
-          alias: "s",
-          type: "string",
-          description: "Method name of a seqno getter method",
-          demandOption: false,
-        })
-        .option("seqno-restriction", {
-          alias: "r",
-          type: "number",
-          description:
-            "The upper bound of a seqno. Only the seq numbers that satisfy the restrictions are considered in executions",
-          demandOption: false,
-        })
-        .option("verbose", {
-          alias: "v",
-          type: "boolean",
-          description: "Use debug output in TSA log",
-        }),
-    handler: async (argv: any) => {
-      await replayAttackCheckCommand(context, argv);
+    describe: "Analyze contract for replay attack vulnerabilities",
+    builder: replayAttackCheckOptions,
+    handler: async (argv: ReplayAttackCheckSchema) => {
+      await replayAttackCheckCommand(context.ui, argv);
     },
   };
 };
@@ -71,22 +76,21 @@ interface SeqnoData {
 
 /**
  * Runs replay attack check analysis and returns the analyzer wrapper
+ * @param ui - UI provider
  * @param contractName - Name of the contract
  * @param contractPath - Path to the compiled contract
- * @param ui - UI provider
- * @param timeout - Analysis timeout in seconds
- * @param verbose - Enable verbose output
+ * @param commonOptions - Common analyzer options (timeout, opcodes, verbose)
  * @param seqnoData - Add the seqno constraints on the checker
+ * @param completionMessage
  * @returns AnalyzerWrapper instance
  */
 export const runReplayAttackCheckAnalysis = async (
+  ui: UIProvider,
   contractName: string,
   contractPath: string,
-  ui: UIProvider,
-  timeout: number | null,
-  verbose: boolean = false,
-  completionMessage: string = "Analysis complete.",
+  commonOptions: CommonAnalyzerOptions,
   seqnoData: SeqnoData | null = null,
+  completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME);
 
@@ -97,10 +101,7 @@ export const runReplayAttackCheckAnalysis = async (
       key: "Options",
       separator: true,
       children: [
-        {
-          key: "Timeout",
-          value: timeout !== null ? `${timeout} seconds` : "not set",
-        },
+        ...generateOptionsForPropertyTree(commonOptions),
         {
           key: "SeqnoData",
           value: seqnoData !== null ? JSON.stringify(seqnoData) : "not set",
@@ -143,10 +144,9 @@ export const runReplayAttackCheckAnalysis = async (
       wrapper.getTempCheckerCellPath(),
       "--output",
       sarifPath,
-      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
       "--exported-inputs",
       reportDir,
-      ...(verbose ? ["-v"] : []),
+      ...generateFlagsFromCommonOptions(commonOptions),
       "--continue-on-contract-exception",
       "--disable-out-message-analysis",
     ],
@@ -156,58 +156,55 @@ export const runReplayAttackCheckAnalysis = async (
   return analyzer;
 };
 
-const replayAttackCheckCommand: CommandHandler = async (
-  context: CommandContext,
-  parsedArgs: any,
-) => {
-  const { ui } = context;
-
-  await buildAllContracts(ui);
-
-  if (!parsedArgs.contract) {
-    throw new Error("Contract name or path is required");
+const resolveSeqnoData = (
+  ui: UIProvider,
+  seqnoMethodName: string | undefined,
+  seqnoRestriction: number | undefined,
+): SeqnoData | null => {
+  if (seqnoMethodName !== undefined && seqnoRestriction !== undefined) {
+    return { getterName: seqnoMethodName, upperBound: seqnoRestriction };
   }
-  const contract = parsedArgs.contract;
-  const contractPath = findCompiledContract(contract);
-
-  if (!existsSync(contractPath)) {
-    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
-    process.exit(1);
-  }
-
-  const timeout = parsedArgs.timeout ?? null;
-
-  const getSeqnoMethodName: string | undefined = parsedArgs.seqnoMethodName;
-  const getSeqnoRestriction: number | undefined = parsedArgs.seqnoRestriction;
-  var seqnoData: SeqnoData | null = null;
-  if (getSeqnoMethodName !== undefined && getSeqnoRestriction !== undefined) {
-    seqnoData = {
-      getterName: getSeqnoMethodName,
-      upperBound: getSeqnoRestriction,
-    };
-  } else if (
-    getSeqnoRestriction !== undefined ||
-    getSeqnoMethodName !== undefined
-  ) {
+  if (seqnoMethodName !== undefined || seqnoRestriction !== undefined) {
     ui.write(
       `\n${Sym.ERR} you should specify either both the seqno getter method and seqno restriction or neither`,
     );
     process.exit(1);
   }
+  return null;
+};
+
+const replayAttackCheckCommand = async (
+  ui: UIProvider,
+  parsedArgs: ReplayAttackCheckSchema,
+) => {
+  const contractName = parsedArgs.contract;
+
+  await buildAllContracts(ui);
+  const contractPath = resolveBuiltContract(ui, contractName);
+
+  const { opcodes, timeout } = await resolveOpcodesAndTimeout(
+    ui,
+    contractName,
+    contractPath,
+    {
+      disableOpcodeExtraction: parsedArgs["disable-opcode-extraction"],
+      explicitTimeout: parsedArgs.timeout,
+    },
+  );
+
+  const seqnoData = resolveSeqnoData(
+    ui,
+    parsedArgs["seqno-method-name"],
+    parsedArgs["seqno-restriction"],
+  );
 
   const analyzer = await runReplayAttackCheckAnalysis(
-    contract,
-    contractPath,
     ui,
-    timeout,
-    parsedArgs.verbose,
-    "Analysis complete.",
+    contractName,
+    contractPath,
+    { timeout, opcodes, verbose: parsedArgs.verbose },
     seqnoData,
   );
 
-  const vulnerability = analyzer.getVulnerabilityFromReport();
-
-  analyzer.reportVulnerability(vulnerability, REPLAY_DESCRIPTION_URL);
-
-  printCleanupInstructions(ui);
+  reportAndExit(ui, analyzer, REPLAY_DESCRIPTION_URL);
 };

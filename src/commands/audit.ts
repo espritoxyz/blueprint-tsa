@@ -220,11 +220,11 @@ async function runReplayAttackCheck(
   verbose: boolean,
 ): Promise<CheckResult> {
   const analyzer = await runReplayAttackCheckAnalysis(
+    ui,
     contractName,
     contractPath,
-    ui,
-    timeout,
-    verbose,
+    { timeout, opcodes: [], verbose },
+    null,
     `${REPLAY_ATTACK_CHECK_NAME} completed.`,
   );
 

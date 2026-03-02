@@ -4,7 +4,7 @@ import { createDrainCheckCommand } from "./commands/drain-check.js";
 import { configureCleanCommand } from "./commands/clean.js";
 import { createOwnerHijackCheckCommand } from "./commands/owner-hijack-check.js";
 import { configureReproduceCommand } from "./commands/reproduce.js";
-import { configureReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
+import { createReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
 import { configureOpcodeInfoCommand } from "./commands/opcode-info.js";
 import { configureAuditCommand } from "./commands/audit.js";
 import { configureBounceCheckCommand } from "./commands/bounce-check.js";
@@ -29,7 +29,6 @@ export const createCLI = (context: CommandContext) => {
 
   const argv = args._.slice(1);
 
-  const replayAttackCheckConfig = configureReplayAttackCheckCommand(context);
   const cleanConfig = configureCleanCommand();
   const reproduceCommand = configureReproduceCommand(context);
   const opcodeInfoConfig = configureOpcodeInfoCommand(context);
@@ -40,12 +39,7 @@ export const createCLI = (context: CommandContext) => {
     .scriptName("tsa")
     .command(createDrainCheckCommand(context))
     .command(createOwnerHijackCheckCommand(context))
-    .command(
-      replayAttackCheckConfig.command,
-      replayAttackCheckConfig.description,
-      replayAttackCheckConfig.builder,
-      replayAttackCheckConfig.handler,
-    )
+    .command(createReplayAttackCheckCommand(context))
     .command(
       cleanConfig.command,
       cleanConfig.description,
