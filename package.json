@@ -13,7 +13,7 @@
     "build": "tsc",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "postinstall": "node dist/install/postinstall.js"
+    "postinstall": "node -e \"if (require('fs').existsSync('dist/install/postinstall.js')) require('./dist/install/postinstall.js')\""
   },
   "devDependencies": {
     "@tact-lang/compiler": "^1.6.13",
