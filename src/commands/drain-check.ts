@@ -23,8 +23,8 @@ import {
   getReportDirectory,
 } from "../common/paths.js";
 import {
-  commonAnalyzerOptions,
-  CommonAnalyzerOptions,
+  CommonAnalyzerRecvInternalOptions,
+  commonAnalyzerRecvInternalOptions,
   generateFlagsFromCommonOptions,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-options.js";
@@ -42,7 +42,7 @@ const drainCheckOptions = {
     description: "Contract name",
     demandOption: true,
   },
-  ...commonAnalyzerOptions,
+  ...commonAnalyzerRecvInternalOptions,
 } as const satisfies Record<string, Options>;
 
 type DrainCheckSchema = InferredOptionTypes<typeof drainCheckOptions>;
@@ -73,7 +73,7 @@ export const runDrainCheckAnalysis = async (
   ui: UIProvider,
   contractName: string,
   contractPath: string,
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerRecvInternalOptions,
   completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);

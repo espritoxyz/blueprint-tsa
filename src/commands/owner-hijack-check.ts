@@ -23,8 +23,8 @@ import {
   getReportDirectory,
 } from "../common/paths.js";
 import {
-  commonAnalyzerOptions,
-  CommonAnalyzerOptions,
+  CommonAnalyzerRecvInternalOptions,
+  commonAnalyzerRecvInternalOptions,
   generateFlagsFromCommonOptions,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-options.js";
@@ -49,7 +49,7 @@ const ownerHijackCheckOptions = {
     description: "The method name of get_owner getter",
     demandOption: true,
   },
-  ...commonAnalyzerOptions,
+  ...commonAnalyzerRecvInternalOptions,
 } as const satisfies Record<string, Options>;
 
 type OwnerHijackCheckSchema = InferredOptionTypes<
@@ -84,7 +84,7 @@ export const runOwnerHijackCheckAnalysis = async (
   contractName: string,
   contractPath: string,
   methodId: bigint,
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerRecvInternalOptions,
   completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME);

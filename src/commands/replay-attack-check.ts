@@ -23,11 +23,7 @@ import {
   generateFlagsFromCommonOptions,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-options.js";
-import {
-  resolveBuiltContract,
-  resolveOpcodesAndTimeout,
-  reportAndExit,
-} from "./command-utils.js";
+import { resolveBuiltContract, reportAndExit } from "./command-utils.js";
 
 const replayAttackCheckOptions = {
   contract: {
@@ -182,15 +178,7 @@ const replayAttackCheckCommand = async (
   await buildAllContracts(ui);
   const contractPath = resolveBuiltContract(ui, contractName);
 
-  const { opcodes, timeout } = await resolveOpcodesAndTimeout(
-    ui,
-    contractName,
-    contractPath,
-    {
-      disableOpcodeExtraction: parsedArgs["disable-opcode-extraction"],
-      explicitTimeout: parsedArgs.timeout,
-    },
-  );
+  const timeout = parsedArgs.timeout ?? null;
 
   const seqnoData = resolveSeqnoData(
     ui,
@@ -202,7 +190,7 @@ const replayAttackCheckCommand = async (
     ui,
     contractName,
     contractPath,
-    { timeout, opcodes, verbose: parsedArgs.verbose },
+    { timeout, verbose: parsedArgs.verbose },
     seqnoData,
   );
 

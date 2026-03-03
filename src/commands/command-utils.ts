@@ -10,7 +10,7 @@ import {
 } from "../reproduce/utils.js";
 import { toNano } from "@ton/core";
 
-const ONE_MINUTE_SECONDS = 60;
+export const ONE_MINUTE_SECONDS = 60;
 
 export const resolveBuiltContract = (
   ui: UIProvider,

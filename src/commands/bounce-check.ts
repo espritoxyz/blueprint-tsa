@@ -26,8 +26,8 @@ import {
   getThrowerPath,
 } from "../common/paths.js";
 import {
-  commonAnalyzerOptions,
-  CommonAnalyzerOptions,
+  CommonAnalyzerRecvInternalOptions,
+  commonAnalyzerRecvInternalOptions,
   generateFlagsFromCommonOptions,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-options.js";
@@ -46,7 +46,7 @@ const bounceCheckOptions = {
     description: "Contract name",
     demandOption: true,
   },
-  ...commonAnalyzerOptions,
+  ...commonAnalyzerRecvInternalOptions,
 } as const satisfies Record<string, Options>;
 
 type BounceCheckSchema = InferredOptionTypes<typeof bounceCheckOptions>;
@@ -77,7 +77,7 @@ export const runBounceCheckAnalysis = async (
   ui: UIProvider,
   contractName: string,
   contractPath: string,
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerRecvInternalOptions,
   completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
   const checkerPath = getCheckerPath(BOUNCE_CHECK_FILENAME);

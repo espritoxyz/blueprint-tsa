@@ -42,12 +42,11 @@ import {
   OpcodeInfo,
 } from "./opcode-info.js";
 import {
-  CommonAnalyzerOptions,
-  commonAnalyzerOptions,
+  commonAnalyzerRecvInternalOptions,
+  CommonAnalyzerRecvInternalOptions,
 } from "./common-analyzer-options.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
-
-const ONE_MINUTE_SECONDS = 60;
+import { ONE_MINUTE_SECONDS } from "./command-utils.js";
 
 interface CheckResult {
   name: string;
@@ -78,7 +77,7 @@ const auditOptions = {
     description:
       "The method name of get_owner getter (optional, enables owner hijack check)",
   },
-  ...commonAnalyzerOptions,
+  ...commonAnalyzerRecvInternalOptions,
 } as const satisfies Record<string, Options>;
 
 type AuditSchema = InferredOptionTypes<typeof auditOptions>;
@@ -208,7 +207,7 @@ async function runDrainCheck(
   contractName: string,
   contractPath: string,
   ui: UIProvider,
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerRecvInternalOptions,
 ): Promise<CheckResult> {
   const analyzer = await runDrainCheckAnalysis(
     ui,
@@ -239,7 +238,7 @@ async function runReplayAttackCheck(
     ui,
     contractName,
     contractPath,
-    { timeout, opcodes: [], verbose },
+    { timeout, verbose },
     null,
     `${REPLAY_ATTACK_CHECK_NAME} completed.`,
   );
@@ -259,7 +258,7 @@ async function runOwnerHijackCheck(
   contractPath: string,
   ui: UIProvider,
   methodName: string,
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerRecvInternalOptions,
 ): Promise<CheckResult> {
   const methodId = BigInt(getMethodId(methodName));
 
@@ -287,7 +286,7 @@ async function runBounceCheck(
   contractName: string,
   contractPath: string,
   ui: UIProvider,
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerRecvInternalOptions,
 ): Promise<CheckResult> {
   const analyzer = await runBounceCheckAnalysis(
     ui,
@@ -458,7 +457,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
   // Run drain-check
   ui.write("");
   ui.write(`${Sym.WAIT} Running drain check...`);
-  const commonOptions: CommonAnalyzerOptions = {
+  const commonOptions: CommonAnalyzerRecvInternalOptions = {
     timeout: effectiveTimeout,
     opcodes,
     verbose,
