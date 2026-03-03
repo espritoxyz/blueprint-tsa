@@ -25,7 +25,7 @@ import {
 import {
   CommonAnalyzerRecvInternalOptions,
   commonAnalyzerRecvInternalOptions,
-  generateFlagsFromCommonOptions,
+  generateFlagsFromCommonRecvInternalOptions,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-options.js";
 import {
@@ -36,12 +36,6 @@ import {
 } from "./command-utils.js";
 
 const drainCheckOptions = {
-  contract: {
-    alias: "c",
-    type: "string",
-    description: "Contract name",
-    demandOption: true,
-  },
   ...commonAnalyzerRecvInternalOptions,
 } as const satisfies Record<string, Options>;
 
@@ -63,7 +57,6 @@ export const createDrainCheckCommand = (
 /**
  * Runs drain check analysis and returns the analyzer wrapper
  * @param ui - UI provider
- * @param contractName - Name of the contract
  * @param contractPath - Path to the compiled contract
  * @param commonOptions
  * @param completionMessage
@@ -71,11 +64,11 @@ export const createDrainCheckCommand = (
  */
 export const runDrainCheckAnalysis = async (
   ui: UIProvider,
-  contractName: string,
   contractPath: string,
   commonOptions: CommonAnalyzerRecvInternalOptions,
   completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
+  const contractName = commonOptions.contract;
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
@@ -113,7 +106,7 @@ export const runDrainCheckAnalysis = async (
       sarifPath,
       "--exported-inputs",
       reportDir,
-      ...generateFlagsFromCommonOptions(commonOptions),
+      ...generateFlagsFromCommonRecvInternalOptions(commonOptions),
     ],
     completionMessage,
   );
@@ -154,10 +147,11 @@ const drainCheckCommand = async (
     },
   );
 
-  const analyzer = await runDrainCheckAnalysis(ui, contractName, contractPath, {
+  const analyzer = await runDrainCheckAnalysis(ui, contractPath, {
     timeout,
     opcodes,
     verbose: parsedArgs.verbose,
+    contract: contractName,
   });
   reportAndExit(ui, analyzer, DRAIN_DESCRIPTION_URL);
 };

@@ -28,7 +28,7 @@ import {
 import {
   CommonAnalyzerRecvInternalOptions,
   commonAnalyzerRecvInternalOptions,
-  generateFlagsFromCommonOptions,
+  generateFlagsFromCommonRecvInternalOptions,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-options.js";
 import {
@@ -40,12 +40,6 @@ import { tmpdir } from "os";
 import path from "path";
 
 const bounceCheckOptions = {
-  contract: {
-    alias: "c",
-    type: "string",
-    description: "Contract name",
-    demandOption: true,
-  },
   ...commonAnalyzerRecvInternalOptions,
 } as const satisfies Record<string, Options>;
 
@@ -67,7 +61,6 @@ export const createBounceCheckCommand = (
 /**
  * Runs bounce check analysis and returns the analyzer wrapper
  * @param ui - UI provider
- * @param contractName - Name of the contract
  * @param contractPath - Path to the compiled contract
  * @param commonOptions
  * @param completionMessage
@@ -75,11 +68,11 @@ export const createBounceCheckCommand = (
  */
 export const runBounceCheckAnalysis = async (
   ui: UIProvider,
-  contractName: string,
   contractPath: string,
   commonOptions: CommonAnalyzerRecvInternalOptions,
   completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
+  const contractName = commonOptions.contract;
   const checkerPath = getCheckerPath(BOUNCE_CHECK_FILENAME);
   const schemePath = getCheckerPath(BOUNCE_CHECK_SCHEME_FILENAME);
   const throwerFuncPath = getThrowerPath();
@@ -136,7 +129,7 @@ export const runBounceCheckAnalysis = async (
         sarifPath,
         "--exported-inputs",
         reportDir,
-        ...generateFlagsFromCommonOptions(commonOptions),
+        ...generateFlagsFromCommonRecvInternalOptions(commonOptions),
         "--scheme",
         schemePath,
         "--continue-on-contract-exception",
@@ -167,15 +160,11 @@ const bounceCheckCommand = async (
     },
   );
 
-  const analyzer = await runBounceCheckAnalysis(
-    ui,
-    contractName,
-    contractPath,
-    {
-      timeout,
-      opcodes,
-      verbose: parsedArgs.verbose,
-    },
-  );
+  const analyzer = await runBounceCheckAnalysis(ui, contractPath, {
+    timeout,
+    opcodes,
+    contract: contractName,
+    verbose: parsedArgs.verbose,
+  });
   reportAndExit(ui, analyzer, BOUNCE_DESCRIPTION_URL);
 };

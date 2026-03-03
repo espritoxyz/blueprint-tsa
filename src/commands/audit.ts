@@ -65,12 +65,6 @@ interface AuditSummary {
 }
 
 const auditOptions = {
-  contract: {
-    alias: "c",
-    type: "string",
-    description: "Contract name",
-    demandOption: true,
-  },
   "owner-method": {
     alias: "m",
     type: "string",
@@ -211,7 +205,6 @@ async function runDrainCheck(
 ): Promise<CheckResult> {
   const analyzer = await runDrainCheckAnalysis(
     ui,
-    contractName,
     contractPath,
     commonOptions,
     `${DRAIN_CHECK_NAME} completed.`,
@@ -236,9 +229,8 @@ async function runReplayAttackCheck(
 ): Promise<CheckResult> {
   const analyzer = await runReplayAttackCheckAnalysis(
     ui,
-    contractName,
     contractPath,
-    { timeout, verbose },
+    { timeout, verbose, contract: contractName },
     null,
     `${REPLAY_ATTACK_CHECK_NAME} completed.`,
   );
@@ -264,7 +256,6 @@ async function runOwnerHijackCheck(
 
   const analyzer = await runOwnerHijackCheckAnalysis(
     ui,
-    contractName,
     contractPath,
     methodId,
     commonOptions,
@@ -290,7 +281,6 @@ async function runBounceCheck(
 ): Promise<CheckResult> {
   const analyzer = await runBounceCheckAnalysis(
     ui,
-    contractName,
     contractPath,
     commonOptions,
     `${BOUNCE_CHECK_NAME} completed.`,
@@ -461,6 +451,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     timeout: effectiveTimeout,
     opcodes,
     verbose,
+    contract: contractName,
   };
   const drainResult = await runDrainCheck(
     contractName,

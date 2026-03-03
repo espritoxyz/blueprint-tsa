@@ -25,7 +25,7 @@ import {
 import {
   CommonAnalyzerRecvInternalOptions,
   commonAnalyzerRecvInternalOptions,
-  generateFlagsFromCommonOptions,
+  generateFlagsFromCommonRecvInternalOptions,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-options.js";
 import {
@@ -37,12 +37,6 @@ import {
 import { OwnerHijackOptions } from "../reproduce/reproduce-config.js";
 
 const ownerHijackCheckOptions = {
-  contract: {
-    alias: "c",
-    type: "string",
-    description: "Contract name",
-    demandOption: true,
-  },
   "method-name": {
     alias: "m",
     type: "string",
@@ -72,7 +66,6 @@ export const createOwnerHijackCheckCommand = (
 /**
  * Runs owner hijack check analysis and returns the analyzer wrapper
  * @param ui - UI provider
- * @param contractName - Name of the contract
  * @param contractPath - Path to the compiled contract
  * @param methodId - Method ID of the owner getter
  * @param commonOptions - Common analyzer options (timeout, opcodes, verbose)
@@ -81,12 +74,12 @@ export const createOwnerHijackCheckCommand = (
  */
 export const runOwnerHijackCheckAnalysis = async (
   ui: UIProvider,
-  contractName: string,
   contractPath: string,
   methodId: bigint,
   commonOptions: CommonAnalyzerRecvInternalOptions,
   completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
+  const contractName = commonOptions.contract;
   const checkerPath = getCheckerPath(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
@@ -130,7 +123,7 @@ export const runOwnerHijackCheckAnalysis = async (
       "--exported-inputs",
       reportDir,
       "--disable-out-message-analysis",
-      ...generateFlagsFromCommonOptions(commonOptions),
+      ...generateFlagsFromCommonRecvInternalOptions(commonOptions),
     ],
     completionMessage,
   );
@@ -175,13 +168,13 @@ const ownerHijackCheckCommand = async (
 
   const analyzer = await runOwnerHijackCheckAnalysis(
     ui,
-    contractName,
     contractPath,
     methodId,
     {
       timeout,
       opcodes,
       verbose: parsedArgs.verbose,
+      contract: contractName,
     },
   );
   reportAndExit(ui, analyzer, OWNER_HIJACK_DESCRIPTION_URL);

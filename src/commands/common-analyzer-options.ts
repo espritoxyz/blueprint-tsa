@@ -4,6 +4,7 @@ import { Options } from "yargs";
 export interface CommonAnalyzerOptions {
   timeout: number | null;
   verbose?: boolean;
+  contract: string;
 }
 
 export interface CommonAnalyzerRecvInternalOptions extends CommonAnalyzerOptions {
@@ -60,6 +61,12 @@ export const commonAnalyzerOptions = {
     alias: "v",
     type: "boolean",
     description: "Use debug output in TSA log",
+  },
+  contract: {
+    alias: "c",
+    type: "string",
+    description: "Contract name",
+    demandOption: true,
   },
 } as const satisfies Record<string, Options>;
 

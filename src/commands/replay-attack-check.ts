@@ -26,12 +26,6 @@ import {
 import { resolveBuiltContract, reportAndExit } from "./command-utils.js";
 
 const replayAttackCheckOptions = {
-  contract: {
-    alias: "c",
-    type: "string",
-    description: "Contract name",
-    demandOption: true,
-  },
   "seqno-method-name": {
     alias: "s",
     type: "string",
@@ -73,7 +67,6 @@ interface SeqnoData {
 /**
  * Runs replay attack check analysis and returns the analyzer wrapper
  * @param ui - UI provider
- * @param contractName - Name of the contract
  * @param contractPath - Path to the compiled contract
  * @param commonOptions - Common analyzer options (timeout, opcodes, verbose)
  * @param seqnoData - Add the seqno constraints on the checker
@@ -82,12 +75,12 @@ interface SeqnoData {
  */
 export const runReplayAttackCheckAnalysis = async (
   ui: UIProvider,
-  contractName: string,
   contractPath: string,
   commonOptions: CommonAnalyzerOptions,
   seqnoData: SeqnoData | null = null,
   completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
+  const contractName = commonOptions.contract;
   const checkerPath = getCheckerPath(REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
@@ -188,9 +181,8 @@ const replayAttackCheckCommand = async (
 
   const analyzer = await runReplayAttackCheckAnalysis(
     ui,
-    contractName,
     contractPath,
-    { timeout, verbose: parsedArgs.verbose },
+    { timeout, verbose: parsedArgs.verbose, contract: contractName },
     seqnoData,
   );
 
