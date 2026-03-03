@@ -24,10 +24,10 @@ import {
 } from "../common/paths.js";
 import {
   CommonAnalyzerRecvInternalOptions,
-  commonAnalyzerRecvInternalOptions,
+  commonAnalyzerRecvInternalFlags,
   generateFlagsFromCommonRecvInternalOptions,
   generateOptionsForPropertyTree,
-} from "./common-analyzer-options.js";
+} from "./common-analyzer-args.js";
 import {
   resolveBuiltContract,
   resolveOpcodesAndTimeout,
@@ -43,7 +43,7 @@ const ownerHijackCheckOptions = {
     description: "The method name of get_owner getter",
     demandOption: true,
   },
-  ...commonAnalyzerRecvInternalOptions,
+  ...commonAnalyzerRecvInternalFlags,
 } as const satisfies Record<string, Options>;
 
 type OwnerHijackCheckSchema = InferredOptionTypes<

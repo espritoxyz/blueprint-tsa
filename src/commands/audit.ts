@@ -42,9 +42,9 @@ import {
   OpcodeInfo,
 } from "./opcode-info.js";
 import {
-  commonAnalyzerRecvInternalOptions,
+  commonAnalyzerRecvInternalFlags,
   CommonAnalyzerRecvInternalOptions,
-} from "./common-analyzer-options.js";
+} from "./common-analyzer-args.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 import { ONE_MINUTE_SECONDS } from "./command-utils.js";
 
@@ -71,7 +71,7 @@ const auditOptions = {
     description:
       "The method name of get_owner getter (optional, enables owner hijack check)",
   },
-  ...commonAnalyzerRecvInternalOptions,
+  ...commonAnalyzerRecvInternalFlags,
 } as const satisfies Record<string, Options>;
 
 type AuditSchema = InferredOptionTypes<typeof auditOptions>;

@@ -27,10 +27,10 @@ import {
 } from "../common/paths.js";
 import {
   CommonAnalyzerRecvInternalOptions,
-  commonAnalyzerRecvInternalOptions,
+  commonAnalyzerRecvInternalFlags,
   generateFlagsFromCommonRecvInternalOptions,
   generateOptionsForPropertyTree,
-} from "./common-analyzer-options.js";
+} from "./common-analyzer-args.js";
 import {
   resolveBuiltContract,
   resolveOpcodesAndTimeout,
@@ -40,7 +40,7 @@ import { tmpdir } from "os";
 import path from "path";
 
 const bounceCheckOptions = {
-  ...commonAnalyzerRecvInternalOptions,
+  ...commonAnalyzerRecvInternalFlags,
 } as const satisfies Record<string, Options>;
 
 type BounceCheckSchema = InferredOptionTypes<typeof bounceCheckOptions>;

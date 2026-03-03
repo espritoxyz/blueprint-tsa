@@ -18,11 +18,11 @@ import {
   getReportDirectory,
 } from "../common/paths.js";
 import {
-  commonAnalyzerOptions,
-  CommonAnalyzerOptions,
+  commonAnalyzerFlags,
+  CommonAnalyzerArgs,
   generateFlagsFromCommonOptions,
   generateOptionsForPropertyTree,
-} from "./common-analyzer-options.js";
+} from "./common-analyzer-args.js";
 import { resolveBuiltContract, reportAndExit } from "./command-utils.js";
 
 const replayAttackCheckOptions = {
@@ -39,7 +39,7 @@ const replayAttackCheckOptions = {
       "The upper bound of a seqno. Only the seq numbers that satisfy the restrictions are considered in executions",
     demandOption: false,
   },
-  ...commonAnalyzerOptions,
+  ...commonAnalyzerFlags,
 } as const satisfies Record<string, Options>;
 
 type ReplayAttackCheckSchema = InferredOptionTypes<
@@ -76,7 +76,7 @@ interface SeqnoData {
 export const runReplayAttackCheckAnalysis = async (
   ui: UIProvider,
   contractPath: string,
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerArgs,
   seqnoData: SeqnoData | null = null,
   completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {

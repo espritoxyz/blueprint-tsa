@@ -1,18 +1,18 @@
 import { TreeProperty } from "../common/draw.js";
 import { Options } from "yargs";
 
-export interface CommonAnalyzerOptions {
+export interface CommonAnalyzerArgs {
   timeout: number | null;
   verbose?: boolean;
   contract: string;
 }
 
-export interface CommonAnalyzerRecvInternalOptions extends CommonAnalyzerOptions {
+export interface CommonAnalyzerRecvInternalOptions extends CommonAnalyzerArgs {
   opcodes: number[];
 }
 
 export function generateFlagsFromCommonOptions(
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerArgs,
 ): string[] {
   return [
     ...(commonOptions.timeout != null
@@ -38,7 +38,7 @@ export function generateFlagsFromCommonRecvInternalOptions(
 }
 
 export function generateOptionsForPropertyTree(
-  commonOptions: CommonAnalyzerOptions,
+  commonOptions: CommonAnalyzerArgs,
 ): TreeProperty[] {
   return [
     {
@@ -51,7 +51,7 @@ export function generateOptionsForPropertyTree(
   ];
 }
 
-export const commonAnalyzerOptions = {
+export const commonAnalyzerFlags = {
   timeout: {
     alias: "t",
     type: "number",
@@ -70,8 +70,8 @@ export const commonAnalyzerOptions = {
   },
 } as const satisfies Record<string, Options>;
 
-export const commonAnalyzerRecvInternalOptions = {
-  ...commonAnalyzerOptions,
+export const commonAnalyzerRecvInternalFlags = {
+  ...commonAnalyzerFlags,
   "disable-opcode-extraction": {
     type: "boolean",
     description:

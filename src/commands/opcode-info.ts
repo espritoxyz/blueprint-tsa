@@ -31,7 +31,7 @@ export interface OpcodeInfo {
   vulnerabilityPath?: string;
 }
 
-const opcodeInfoOptions = {
+const opcodeInfoFlags = {
   contract: {
     alias: "c",
     type: "string",
@@ -51,7 +51,7 @@ const opcodeInfoOptions = {
   },
 } as const satisfies Record<string, Options>;
 
-type OpcodeInfoSchema = InferredOptionTypes<typeof opcodeInfoOptions>;
+type OpcodeInfoSchema = InferredOptionTypes<typeof opcodeInfoFlags>;
 
 export const createOpcodeInfoCommand = (
   context: CommandContext,
@@ -59,7 +59,7 @@ export const createOpcodeInfoCommand = (
   return {
     command: OPCODE_INFO,
     describe: "Display information about contract opcodes",
-    builder: opcodeInfoOptions,
+    builder: opcodeInfoFlags,
     handler: async (argv: OpcodeInfoSchema) => {
       await opcodeInfoHandler(context, argv);
     },
