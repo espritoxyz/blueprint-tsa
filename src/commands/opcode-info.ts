@@ -24,6 +24,7 @@ import { beginCell } from "@ton/core";
 import { TreeProperty } from "../common/draw.js";
 import { formatOpcodeHex } from "../common/format-utils.js";
 import { findNonFailingExecution } from "../common/result-parsing.js";
+import { commonAnalyzerCliOptions } from "./common-analyzer-args.js";
 
 export interface OpcodeInfo {
   opcode: number;
@@ -32,23 +33,7 @@ export interface OpcodeInfo {
 }
 
 const opcodeInfoCliOptions = {
-  contract: {
-    alias: "c",
-    type: "string",
-    description: "Contract name",
-    demandOption: true,
-  },
-  timeout: {
-    alias: "t",
-    type: "number",
-    description: "Timeout in seconds for analyzing one opcode",
-    default: 60,
-  },
-  verbose: {
-    alias: "v",
-    type: "boolean",
-    description: "Use debug output in TSA log",
-  },
+  ...commonAnalyzerCliOptions,
 } as const satisfies Record<string, Options>;
 
 type OpcodeInfoSchema = InferredOptionTypes<typeof opcodeInfoCliOptions>;
