@@ -23,9 +23,9 @@ import {
   getReportDirectory,
 } from "../common/paths.js";
 import {
-  CommonAnalyzerRecvInternalOptions,
-  commonAnalyzerRecvInternalFlags,
-  generateFlagsFromCommonRecvInternalOptions,
+  CommonAnalyzerRecvInternalArgs,
+  commonAnalyzerRecvInternalCliOptions,
+  generateFlagsFromCommonRecvInternalArgs,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-args.js";
 import {
@@ -36,7 +36,7 @@ import {
 } from "./command-utils.js";
 
 const drainCheckOptions = {
-  ...commonAnalyzerRecvInternalFlags,
+  ...commonAnalyzerRecvInternalCliOptions,
 } as const satisfies Record<string, Options>;
 
 type DrainCheckSchema = InferredOptionTypes<typeof drainCheckOptions>;
@@ -58,17 +58,17 @@ export const createDrainCheckCommand = (
  * Runs drain check analysis and returns the analyzer wrapper
  * @param ui - UI provider
  * @param contractPath - Path to the compiled contract
- * @param commonOptions
+ * @param commonArgs
  * @param completionMessage
  * @returns AnalyzerWrapper instance
  */
 export const runDrainCheckAnalysis = async (
   ui: UIProvider,
   contractPath: string,
-  commonOptions: CommonAnalyzerRecvInternalOptions,
+  commonArgs: CommonAnalyzerRecvInternalArgs,
   completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
-  const contractName = commonOptions.contract;
+  const contractName = commonArgs.contract;
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
@@ -77,7 +77,7 @@ export const runDrainCheckAnalysis = async (
     {
       key: "Options",
       separator: true,
-      children: [...generateOptionsForPropertyTree(commonOptions)],
+      children: [...generateOptionsForPropertyTree(commonArgs)],
     },
   ];
   const analyzer = new AnalyzerWrapper({
@@ -106,7 +106,7 @@ export const runDrainCheckAnalysis = async (
       sarifPath,
       "--exported-inputs",
       reportDir,
-      ...generateFlagsFromCommonRecvInternalOptions(commonOptions),
+      ...generateFlagsFromCommonRecvInternalArgs(commonArgs),
     ],
     completionMessage,
   );
@@ -117,7 +117,7 @@ export const runDrainCheckAnalysis = async (
     writeReproduceConfig(
       vulnerability,
       DRAIN_CHECK_ID,
-      commonOptions.timeout,
+      commonArgs.timeout,
       analyzer.id,
       {
         kind: DRAIN_CHECK_ID,

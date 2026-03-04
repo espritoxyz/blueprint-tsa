@@ -18,14 +18,14 @@ import {
   getReportDirectory,
 } from "../common/paths.js";
 import {
-  commonAnalyzerFlags,
+  commonAnalyzerCliOptions,
   CommonAnalyzerArgs,
-  generateFlagsFromCommonOptions,
+  generateFlagsFromCommonArgs,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-args.js";
 import { resolveBuiltContract, reportAndExit } from "./command-utils.js";
 
-const replayAttackCheckOptions = {
+const replayAttackCheckCliOptions = {
   "seqno-method-name": {
     alias: "s",
     type: "string",
@@ -39,11 +39,11 @@ const replayAttackCheckOptions = {
       "The upper bound of a seqno. Only the seq numbers that satisfy the restrictions are considered in executions",
     demandOption: false,
   },
-  ...commonAnalyzerFlags,
+  ...commonAnalyzerCliOptions,
 } as const satisfies Record<string, Options>;
 
 type ReplayAttackCheckSchema = InferredOptionTypes<
-  typeof replayAttackCheckOptions
+  typeof replayAttackCheckCliOptions
 >;
 
 export const createReplayAttackCheckCommand = (
@@ -52,7 +52,7 @@ export const createReplayAttackCheckCommand = (
   return {
     command: REPLAY_ATTACK_CHECK_ID,
     describe: "Analyze contract for replay attack vulnerabilities",
-    builder: replayAttackCheckOptions,
+    builder: replayAttackCheckCliOptions,
     handler: async (argv: ReplayAttackCheckSchema) => {
       await replayAttackCheckCommand(context.ui, argv);
     },
@@ -68,7 +68,7 @@ interface SeqnoData {
  * Runs replay attack check analysis and returns the analyzer wrapper
  * @param ui - UI provider
  * @param contractPath - Path to the compiled contract
- * @param commonOptions - Common analyzer options (timeout, opcodes, verbose)
+ * @param commonArgs - Common analyzer options (timeout, opcodes, verbose)
  * @param seqnoData - Add the seqno constraints on the checker
  * @param completionMessage
  * @returns AnalyzerWrapper instance
@@ -76,11 +76,11 @@ interface SeqnoData {
 export const runReplayAttackCheckAnalysis = async (
   ui: UIProvider,
   contractPath: string,
-  commonOptions: CommonAnalyzerArgs,
+  commonArgs: CommonAnalyzerArgs,
   seqnoData: SeqnoData | null = null,
   completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
-  const contractName = commonOptions.contract;
+  const contractName = commonArgs.contract;
   const checkerPath = getCheckerPath(REPLAY_ATTACK_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
@@ -90,7 +90,7 @@ export const runReplayAttackCheckAnalysis = async (
       key: "Options",
       separator: true,
       children: [
-        ...generateOptionsForPropertyTree(commonOptions),
+        ...generateOptionsForPropertyTree(commonArgs),
         {
           key: "SeqnoData",
           value: seqnoData !== null ? JSON.stringify(seqnoData) : "not set",
@@ -135,7 +135,7 @@ export const runReplayAttackCheckAnalysis = async (
       sarifPath,
       "--exported-inputs",
       reportDir,
-      ...generateFlagsFromCommonOptions(commonOptions),
+      ...generateFlagsFromCommonArgs(commonArgs),
       "--continue-on-contract-exception",
       "--disable-out-message-analysis",
     ],

@@ -25,7 +25,7 @@ import { CommandModule, InferredOptionTypes } from "yargs";
 import { TsaVulnerabilityConfigSchema } from "../reproduce/reproduce-config.js";
 import { nanotonToTon } from "../common/format-utils.js";
 
-const reproduceCommandFlags = {
+const reproduceCommandCliOptions = {
   config: {
     alias: "c",
     type: "string",
@@ -33,7 +33,9 @@ const reproduceCommandFlags = {
   },
 } as const;
 
-type ReproduceCommandSchema = InferredOptionTypes<typeof reproduceCommandFlags>;
+type ReproduceCommandSchema = InferredOptionTypes<
+  typeof reproduceCommandCliOptions
+>;
 
 export function createReproduceCommand(
   context: CommandContext,
@@ -41,7 +43,7 @@ export function createReproduceCommand(
   return {
     command: REPRODUCE_ID,
     describe: "Reproduce found vulnerability",
-    builder: reproduceCommandFlags,
+    builder: reproduceCommandCliOptions,
     handler: async (argv: ReproduceCommandSchema) => {
       await executeReproduceCommand(context, argv);
     },

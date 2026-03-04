@@ -42,8 +42,8 @@ import {
   OpcodeInfo,
 } from "./opcode-info.js";
 import {
-  commonAnalyzerRecvInternalFlags,
-  CommonAnalyzerRecvInternalOptions,
+  commonAnalyzerRecvInternalCliOptions,
+  CommonAnalyzerRecvInternalArgs,
 } from "./common-analyzer-args.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 import { ONE_MINUTE_SECONDS } from "./command-utils.js";
@@ -71,7 +71,7 @@ const auditOptions = {
     description:
       "The method name of get_owner getter (optional, enables owner hijack check)",
   },
-  ...commonAnalyzerRecvInternalFlags,
+  ...commonAnalyzerRecvInternalCliOptions,
 } as const satisfies Record<string, Options>;
 
 type AuditSchema = InferredOptionTypes<typeof auditOptions>;
@@ -201,12 +201,12 @@ async function runDrainCheck(
   contractName: string,
   contractPath: string,
   ui: UIProvider,
-  commonOptions: CommonAnalyzerRecvInternalOptions,
+  commonArgs: CommonAnalyzerRecvInternalArgs,
 ): Promise<CheckResult> {
   const analyzer = await runDrainCheckAnalysis(
     ui,
     contractPath,
-    commonOptions,
+    commonArgs,
     `${DRAIN_CHECK_NAME} completed.`,
   );
 
@@ -216,7 +216,7 @@ async function runDrainCheck(
     "No drain vulnerabilities detected",
     "Vulnerability found - contract may be vulnerable to drain attacks",
     contractName,
-    commonOptions.timeout,
+    commonArgs.timeout,
   );
 }
 
@@ -250,7 +250,7 @@ async function runOwnerHijackCheck(
   contractPath: string,
   ui: UIProvider,
   methodName: string,
-  commonOptions: CommonAnalyzerRecvInternalOptions,
+  commonArgs: CommonAnalyzerRecvInternalArgs,
 ): Promise<CheckResult> {
   const methodId = BigInt(getMethodId(methodName));
 
@@ -258,7 +258,7 @@ async function runOwnerHijackCheck(
     ui,
     contractPath,
     methodId,
-    commonOptions,
+    commonArgs,
     `${OWNER_HIJACK_CHECK_NAME} completed.`,
   );
 
@@ -268,7 +268,7 @@ async function runOwnerHijackCheck(
     "No owner hijack vulnerabilities detected",
     "Vulnerability found - contract owner may be hijackable",
     contractName,
-    commonOptions.timeout,
+    commonArgs.timeout,
     methodName,
   );
 }
@@ -277,12 +277,12 @@ async function runBounceCheck(
   contractName: string,
   contractPath: string,
   ui: UIProvider,
-  commonOptions: CommonAnalyzerRecvInternalOptions,
+  commonArgs: CommonAnalyzerRecvInternalArgs,
 ): Promise<CheckResult> {
   const analyzer = await runBounceCheckAnalysis(
     ui,
     contractPath,
-    commonOptions,
+    commonArgs,
     `${BOUNCE_CHECK_NAME} completed.`,
   );
 
@@ -292,7 +292,7 @@ async function runBounceCheck(
     "No bounce message handling vulnerabilities detected",
     "Vulnerability found - contract may not handle bounced messages correctly",
     contractName,
-    commonOptions.timeout,
+    commonArgs.timeout,
   );
 }
 
@@ -447,7 +447,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
   // Run drain-check
   ui.write("");
   ui.write(`${Sym.WAIT} Running drain check...`);
-  const commonOptions: CommonAnalyzerRecvInternalOptions = {
+  const commonArgs: CommonAnalyzerRecvInternalArgs = {
     timeout: effectiveTimeout,
     opcodes,
     verbose,
@@ -457,7 +457,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     contractName,
     contractPath,
     ui,
-    commonOptions,
+    commonArgs,
   );
   summary.checks.push(drainResult);
 
@@ -480,7 +480,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     contractName,
     contractPath,
     ui,
-    commonOptions,
+    commonArgs,
   );
   summary.checks.push(bounceResult);
 
@@ -493,7 +493,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
       contractPath,
       ui,
       ownerMethod,
-      commonOptions,
+      commonArgs,
     );
     summary.checks.push(ownerResult);
   } else {

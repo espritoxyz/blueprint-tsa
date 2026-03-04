@@ -7,51 +7,48 @@ export interface CommonAnalyzerArgs {
   contract: string;
 }
 
-export interface CommonAnalyzerRecvInternalOptions extends CommonAnalyzerArgs {
+export interface CommonAnalyzerRecvInternalArgs extends CommonAnalyzerArgs {
   opcodes: number[];
 }
 
-export function generateFlagsFromCommonOptions(
-  commonOptions: CommonAnalyzerArgs,
+export function generateFlagsFromCommonArgs(
+  commonArgs: CommonAnalyzerArgs,
 ): string[] {
   return [
-    ...(commonOptions.timeout != null
-      ? ["--timeout", commonOptions.timeout.toString()]
+    ...(commonArgs.timeout != null
+      ? ["--timeout", commonArgs.timeout.toString()]
       : []),
-    ...(commonOptions.verbose ? ["-v"] : []),
+    ...(commonArgs.verbose ? ["-v"] : []),
   ];
 }
 
-export function generateFlagsFromCommonRecvInternalOptions(
-  commonOptions: CommonAnalyzerRecvInternalOptions,
+export function generateFlagsFromCommonRecvInternalArgs(
+  commonArgs: CommonAnalyzerRecvInternalArgs,
 ): string[] {
   return [
-    ...(commonOptions.timeout != null
-      ? ["--timeout", commonOptions.timeout.toString()]
+    ...(commonArgs.timeout != null
+      ? ["--timeout", commonArgs.timeout.toString()]
       : []),
-    ...(commonOptions.verbose ? ["-v"] : []),
-    ...commonOptions.opcodes.flatMap((opcode) => [
-      "--opcode",
-      opcode.toString(),
-    ]),
+    ...(commonArgs.verbose ? ["-v"] : []),
+    ...commonArgs.opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
   ];
 }
 
 export function generateOptionsForPropertyTree(
-  commonOptions: CommonAnalyzerArgs,
+  commonArgs: CommonAnalyzerArgs,
 ): TreeProperty[] {
   return [
     {
       key: "Timeout",
       value:
-        commonOptions.timeout !== null
-          ? `${commonOptions.timeout} seconds`
+        commonArgs.timeout !== null
+          ? `${commonArgs.timeout} seconds`
           : "not set",
     },
   ];
 }
 
-export const commonAnalyzerFlags = {
+export const commonAnalyzerCliOptions = {
   timeout: {
     alias: "t",
     type: "number",
@@ -70,8 +67,8 @@ export const commonAnalyzerFlags = {
   },
 } as const satisfies Record<string, Options>;
 
-export const commonAnalyzerRecvInternalFlags = {
-  ...commonAnalyzerFlags,
+export const commonAnalyzerRecvInternalCliOptions = {
+  ...commonAnalyzerCliOptions,
   "disable-opcode-extraction": {
     type: "boolean",
     description:

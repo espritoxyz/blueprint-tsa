@@ -23,9 +23,9 @@ import {
   getReportDirectory,
 } from "../common/paths.js";
 import {
-  CommonAnalyzerRecvInternalOptions,
-  commonAnalyzerRecvInternalFlags,
-  generateFlagsFromCommonRecvInternalOptions,
+  CommonAnalyzerRecvInternalArgs,
+  commonAnalyzerRecvInternalCliOptions,
+  generateFlagsFromCommonRecvInternalArgs,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-args.js";
 import {
@@ -43,7 +43,7 @@ const ownerHijackCheckOptions = {
     description: "The method name of get_owner getter",
     demandOption: true,
   },
-  ...commonAnalyzerRecvInternalFlags,
+  ...commonAnalyzerRecvInternalCliOptions,
 } as const satisfies Record<string, Options>;
 
 type OwnerHijackCheckSchema = InferredOptionTypes<
@@ -68,7 +68,7 @@ export const createOwnerHijackCheckCommand = (
  * @param ui - UI provider
  * @param contractPath - Path to the compiled contract
  * @param methodId - Method ID of the owner getter
- * @param commonOptions - Common analyzer options (timeout, opcodes, verbose)
+ * @param commonArgs - Common analyzer options (timeout, opcodes, verbose)
  * @param completionMessage
  * @returns AnalyzerWrapper instance
  */
@@ -76,10 +76,10 @@ export const runOwnerHijackCheckAnalysis = async (
   ui: UIProvider,
   contractPath: string,
   methodId: bigint,
-  commonOptions: CommonAnalyzerRecvInternalOptions,
+  commonArgs: CommonAnalyzerRecvInternalArgs,
   completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
-  const contractName = commonOptions.contract;
+  const contractName = commonArgs.contract;
   const checkerPath = getCheckerPath(OWNER_HIJACK_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
@@ -89,7 +89,7 @@ export const runOwnerHijackCheckAnalysis = async (
       key: "Options",
       separator: true,
       children: [
-        ...generateOptionsForPropertyTree(commonOptions),
+        ...generateOptionsForPropertyTree(commonArgs),
         { key: "Method id", value: methodId.toString() },
       ],
     },
@@ -123,7 +123,7 @@ export const runOwnerHijackCheckAnalysis = async (
       "--exported-inputs",
       reportDir,
       "--disable-out-message-analysis",
-      ...generateFlagsFromCommonRecvInternalOptions(commonOptions),
+      ...generateFlagsFromCommonRecvInternalArgs(commonArgs),
     ],
     completionMessage,
   );
@@ -134,7 +134,7 @@ export const runOwnerHijackCheckAnalysis = async (
     writeReproduceConfig(
       vulnerability,
       OWNER_HIJACK_CHECK_ID,
-      commonOptions.timeout,
+      commonArgs.timeout,
       analyzer.id,
       {
         kind: "owner-hijack-check",

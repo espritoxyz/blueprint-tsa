@@ -26,9 +26,9 @@ import {
   getThrowerPath,
 } from "../common/paths.js";
 import {
-  CommonAnalyzerRecvInternalOptions,
-  commonAnalyzerRecvInternalFlags,
-  generateFlagsFromCommonRecvInternalOptions,
+  CommonAnalyzerRecvInternalArgs,
+  commonAnalyzerRecvInternalCliOptions,
+  generateFlagsFromCommonRecvInternalArgs,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-args.js";
 import {
@@ -40,7 +40,7 @@ import { tmpdir } from "os";
 import path from "path";
 
 const bounceCheckOptions = {
-  ...commonAnalyzerRecvInternalFlags,
+  ...commonAnalyzerRecvInternalCliOptions,
 } as const satisfies Record<string, Options>;
 
 type BounceCheckSchema = InferredOptionTypes<typeof bounceCheckOptions>;
@@ -62,17 +62,17 @@ export const createBounceCheckCommand = (
  * Runs bounce check analysis and returns the analyzer wrapper
  * @param ui - UI provider
  * @param contractPath - Path to the compiled contract
- * @param commonOptions
+ * @param commonArgs
  * @param completionMessage
  * @returns AnalyzerWrapper instance
  */
 export const runBounceCheckAnalysis = async (
   ui: UIProvider,
   contractPath: string,
-  commonOptions: CommonAnalyzerRecvInternalOptions,
+  commonArgs: CommonAnalyzerRecvInternalArgs,
   completionMessage: string = "Analysis complete.",
 ): Promise<AnalyzerWrapper> => {
-  const contractName = commonOptions.contract;
+  const contractName = commonArgs.contract;
   const checkerPath = getCheckerPath(BOUNCE_CHECK_FILENAME);
   const schemePath = getCheckerPath(BOUNCE_CHECK_SCHEME_FILENAME);
   const throwerFuncPath = getThrowerPath();
@@ -94,7 +94,7 @@ export const runBounceCheckAnalysis = async (
       {
         key: "Options",
         separator: true,
-        children: [...generateOptionsForPropertyTree(commonOptions)],
+        children: [...generateOptionsForPropertyTree(commonArgs)],
       },
     ];
 
@@ -129,7 +129,7 @@ export const runBounceCheckAnalysis = async (
         sarifPath,
         "--exported-inputs",
         reportDir,
-        ...generateFlagsFromCommonRecvInternalOptions(commonOptions),
+        ...generateFlagsFromCommonRecvInternalArgs(commonArgs),
         "--scheme",
         schemePath,
         "--continue-on-contract-exception",
