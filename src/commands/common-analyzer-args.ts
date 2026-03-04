@@ -5,6 +5,8 @@ export interface CommonAnalyzerArgs {
   timeout: number | null;
   verbose?: boolean;
   contract: string;
+  iterationLimit: number | null;
+  recursionLimit: number | null;
 }
 
 export interface CommonAnalyzerRecvInternalArgs extends CommonAnalyzerArgs {
@@ -19,19 +21,21 @@ export function generateFlagsFromCommonArgs(
       ? ["--timeout", commonArgs.timeout.toString()]
       : []),
     ...(commonArgs.verbose ? ["-v"] : []),
+    ...(commonArgs.iterationLimit
+      ? ["--iteration-limit", commonArgs.iterationLimit.toString()]
+      : []),
+    ...(commonArgs.recursionLimit
+      ? ["--max-recursion-depth", commonArgs.recursionLimit.toString()]
+      : []),
   ];
 }
 
 export function generateFlagsFromCommonRecvInternalArgs(
   commonArgs: CommonAnalyzerRecvInternalArgs,
 ): string[] {
-  return [
-    ...(commonArgs.timeout != null
-      ? ["--timeout", commonArgs.timeout.toString()]
-      : []),
-    ...(commonArgs.verbose ? ["-v"] : []),
+  return generateFlagsFromCommonArgs(commonArgs).concat([
     ...commonArgs.opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
-  ];
+  ]);
 }
 
 export function generateOptionsForPropertyTree(
@@ -43,6 +47,20 @@ export function generateOptionsForPropertyTree(
       value:
         commonArgs.timeout !== null
           ? `${commonArgs.timeout} seconds`
+          : "not set",
+    },
+    {
+      key: "Iteration Limit",
+      value:
+        commonArgs.iterationLimit !== null
+          ? commonArgs.iterationLimit.toString()
+          : "not set",
+    },
+    {
+      key: "Recursion Limit",
+      value:
+        commonArgs.recursionLimit !== null
+          ? commonArgs.recursionLimit.toString()
           : "not set",
     },
   ];
@@ -64,6 +82,14 @@ export const commonAnalyzerCliOptions = {
     type: "string",
     description: "Contract name",
     demandOption: true,
+  },
+  "iteration-limit": {
+    type: "number",
+    description: "Iteration limit",
+  },
+  "recursion-limit": {
+    type: "number",
+    description: "Recursion limit",
   },
 } as const satisfies Record<string, Options>;
 

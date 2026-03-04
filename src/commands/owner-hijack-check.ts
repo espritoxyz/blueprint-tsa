@@ -140,6 +140,8 @@ export const runOwnerHijackCheckAnalysis = async (
         kind: "owner-hijack-check",
         methodId: methodId.toString(),
       },
+      commonArgs.iterationLimit,
+      commonArgs.recursionLimit,
     );
   }
 
@@ -175,6 +177,8 @@ const ownerHijackCheckCommand = async (
       opcodes,
       verbose: parsedArgs.verbose,
       contract: contractName,
+      iterationLimit: parsedArgs["iteration-limit"] ?? null,
+      recursionLimit: parsedArgs["recursion-limit"] ?? null,
     },
   );
   reportAndExit(ui, analyzer, OWNER_HIJACK_DESCRIPTION_URL);

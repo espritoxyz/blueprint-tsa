@@ -13,6 +13,8 @@ export const writeReproduceConfig = (
   timeout: number | null,
   id: string,
   concreteCheckerOptions: ConcreteCheckerOptions,
+  iterationLimit: number | null,
+  recursionLimit: number | null,
 ): void => {
   if (vulnerability.value == null) {
     throw new Error("Unexpected external message");
@@ -25,6 +27,8 @@ export const writeReproduceConfig = (
     dataPath: vulnerability.dataPath,
     suggestedValue: vulnerability.value.toString(),
     suggestedBalance: vulnerability.balance.toString(),
+    iterationLimit,
+    recursionLimit,
     timeout,
     concreteCheckerOptions,
   };

@@ -143,6 +143,8 @@ export const executeReproduceCommand = async (
       contractAddress: address,
       senderAddress,
       timeout: configJson.timeout,
+      iterationLimit: configJson.iterationLimit,
+      recursionLimit: configJson.recursionLimit,
       concreteCheckerOptions: configJson.concreteCheckerOptions,
     };
 

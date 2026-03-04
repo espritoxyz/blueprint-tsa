@@ -27,6 +27,8 @@ export const TsaVulnerabilityConfigSchema = z.object({
   suggestedValue: z.string(),
   suggestedBalance: z.string(),
   timeout: z.int().nullable(),
+  iterationLimit: z.int().nullable(),
+  recursionLimit: z.int().nullable(),
   concreteCheckerOptions: ConcreteCheckerOptionsSchema,
 });
 

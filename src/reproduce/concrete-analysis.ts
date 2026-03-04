@@ -13,6 +13,8 @@ export interface ConcreteAnalysisConfig {
   contractAddress: Address;
   senderAddress: Address;
   timeout: number | null;
+  iterationLimit: number | null;
+  recursionLimit: number | null;
   concreteCheckerOptions: ConcreteCheckerOptions;
 }
 
