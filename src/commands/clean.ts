@@ -1,17 +1,18 @@
 import { rmSync } from "fs";
-import { Argv } from "yargs";
+import { CommandModule } from "yargs";
 import { findTSAReportsDirectory } from "../common/paths.js";
 
-export const configureCleanCommand = (): any => {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export function createCleanCommand(): CommandModule<{}, {}> {
   return {
     command: "clean",
-    description: "Clean directory with reports",
-    builder: (yargs: Argv) => yargs,
-    handler: async (_argv: any) => {
+    describe: "Clean directory with reports",
+    builder: {},
+    handler: async () => {
       await cleanCommand();
     },
   };
-};
+}
 
 const cleanCommand = async () => {
   const reportsDir = findTSAReportsDirectory();

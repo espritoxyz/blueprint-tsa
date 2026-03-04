@@ -1,13 +1,13 @@
 import yargs from "yargs";
 import { Args, UIProvider } from "@ton/blueprint";
-import { configureDrainCheckCommand } from "./commands/drain-check.js";
-import { configureCleanCommand } from "./commands/clean.js";
-import { configureOwnerHijackCommand } from "./commands/owner-hijack-check.js";
-import { configureReproduceCommand } from "./commands/reproduce.js";
-import { configureReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
-import { configureOpcodeInfoCommand } from "./commands/opcode-info.js";
-import { configureAuditCommand } from "./commands/audit.js";
-import { configureBounceCheckCommand } from "./commands/bounce-check.js";
+import { createDrainCheckCommand } from "./commands/drain-check.js";
+import { createCleanCommand } from "./commands/clean.js";
+import { createOwnerHijackCheckCommand } from "./commands/owner-hijack-check.js";
+import { createReproduceCommand } from "./commands/reproduce.js";
+import { createReplayAttackCheckCommand } from "./commands/replay-attack-check.js";
+import { createOpcodeInfoCommand } from "./commands/opcode-info.js";
+import { createAuditCommand } from "./commands/audit.js";
+import { createBounceCheckCommand } from "./commands/bounce-check.js";
 
 export interface CommandContext {
   ui: UIProvider;
@@ -29,65 +29,16 @@ export const createCLI = (context: CommandContext) => {
 
   const argv = args._.slice(1);
 
-  const drainCheckConfig = configureDrainCheckCommand(context);
-  const replayAttackCheckConfig = configureReplayAttackCheckCommand(context);
-  const cleanConfig = configureCleanCommand();
-  const reproduceCommand = configureReproduceCommand(context);
-  const ownerHijackConfig = configureOwnerHijackCommand(context);
-  const opcodeInfoConfig = configureOpcodeInfoCommand(context);
-  const auditConfig = configureAuditCommand(context);
-  const bounceCheckConfig = configureBounceCheckCommand(context);
-
   return yargs(argv)
     .scriptName("tsa")
-    .command(
-      drainCheckConfig.command,
-      drainCheckConfig.description,
-      drainCheckConfig.builder,
-      drainCheckConfig.handler,
-    )
-    .command(
-      replayAttackCheckConfig.command,
-      replayAttackCheckConfig.description,
-      replayAttackCheckConfig.builder,
-      replayAttackCheckConfig.handler,
-    )
-    .command(
-      cleanConfig.command,
-      cleanConfig.description,
-      cleanConfig.builder,
-      cleanConfig.handler,
-    )
-    .command(
-      ownerHijackConfig.command,
-      ownerHijackConfig.description,
-      ownerHijackConfig.builder,
-      ownerHijackConfig.handler,
-    )
-    .command(
-      reproduceCommand.command,
-      reproduceCommand.description,
-      reproduceCommand.builder,
-      reproduceCommand.handler,
-    )
-    .command(
-      opcodeInfoConfig.command,
-      opcodeInfoConfig.description,
-      opcodeInfoConfig.builder,
-      opcodeInfoConfig.handler,
-    )
-    .command(
-      auditConfig.command,
-      auditConfig.description,
-      auditConfig.builder,
-      auditConfig.handler,
-    )
-    .command(
-      bounceCheckConfig.command,
-      bounceCheckConfig.description,
-      bounceCheckConfig.builder,
-      bounceCheckConfig.handler,
-    )
+    .command(createDrainCheckCommand(context))
+    .command(createOwnerHijackCheckCommand(context))
+    .command(createReplayAttackCheckCommand(context))
+    .command(createBounceCheckCommand(context))
+    .command(createCleanCommand())
+    .command(createReproduceCommand(context))
+    .command(createOpcodeInfoCommand(context))
+    .command(createAuditCommand(context))
     .demandCommand(1, "Please specify a subcommand")
     .help()
     .alias("help", "h")

@@ -12,21 +12,20 @@ export interface ConcreteAnalysisConfig {
   balance: bigint;
   contractAddress: Address;
   senderAddress: Address;
-  ui: UIProvider;
   timeout: number | null;
   concreteCheckerOptions: ConcreteCheckerOptions;
 }
 
 export const runConcreteAnalysis = async (
+  ui: UIProvider,
   mode: string,
   config: ConcreteAnalysisConfig,
 ): Promise<ReproduceParameters | null> => {
-  const ui = config.ui;
   const concreteCheckerOptions = config.concreteCheckerOptions;
   if (concreteCheckerOptions.kind === "drain-check") {
-    return await drainCheckConcrete(config);
+    return await drainCheckConcrete(ui, config);
   } else if (concreteCheckerOptions.kind === "owner-hijack-check") {
-    return await ownerHijackCheckConcrete(config, concreteCheckerOptions);
+    return await ownerHijackCheckConcrete(ui, config, concreteCheckerOptions);
   } else {
     ui.write(`${Sym.ERR} Invalid command: ${mode}`);
     process.exit(1);

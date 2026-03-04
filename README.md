@@ -5,24 +5,25 @@ A plugin for the [Blueprint Framework](https://github.com/ton-org/blueprint/) th
 ## Getting Started
 
 1. Add this plugin as a dependency of your Blueprint project:
+
 ```bash
 yarn add blueprint-tsa
 ```
 
 2. Add this configuration to `blueprint.config.ts`:
+
 ```ts
-import { TsaPlugin } from 'blueprint-tsa';
+import { TsaPlugin } from "blueprint-tsa";
 
 export const config = {
-    plugins: [
-        new TsaPlugin(),
-    ],
+  plugins: [new TsaPlugin()],
 };
 ```
 
 ## Usage
 
 Run the following command:
+
 ```bash
 yarn blueprint tsa help
 ```

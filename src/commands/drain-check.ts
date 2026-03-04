@@ -1,9 +1,9 @@
-import yargs, { Argv } from "yargs";
+import { CommandModule, InferredOptionTypes, Options } from "yargs";
 import { existsSync } from "fs";
-import { beginCell, toNano } from "@ton/core";
+import { beginCell } from "@ton/core";
 import { UIProvider } from "@ton/blueprint";
 import { TreeProperty } from "../common/draw.js";
-import { CommandHandler, CommandContext } from "../cli.js";
+import { CommandContext } from "../cli.js";
 import { ReproduceParameters } from "../reproduce/network.js";
 import { ConcreteAnalysisConfig } from "../reproduce/concrete-analysis.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
@@ -16,73 +16,59 @@ import {
   ERROR_EXIT_CODE,
   DRAIN_DESCRIPTION_URL,
 } from "../common/constants.js";
-import { buildContracts } from "../common/build-utils.js";
+import { buildAllContracts } from "../common/build-utils.js";
 import {
-  printCleanupInstructions,
-  printReproductionInstructions,
-} from "../reproduce/utils.js";
-import {
-  findCompiledContract,
   getCheckerPath,
   getSarifReportPath,
   getReportDirectory,
 } from "../common/paths.js";
-import { extractOpcodes } from "../common/opcode-extractor.js";
+import {
+  CommonAnalyzerRecvInternalArgs,
+  commonAnalyzerRecvInternalCliOptions,
+  generateFlagsFromCommonRecvInternalArgs,
+  generateOptionsForPropertyTree,
+} from "./common-analyzer-args.js";
+import {
+  resolveBuiltContract,
+  resolveOpcodesAndTimeout,
+  reportAndExit,
+  readNanotons,
+} from "./command-utils.js";
 
-const ONE_MINUTE_SECONDS = 60;
+const drainCheckOptions = {
+  ...commonAnalyzerRecvInternalCliOptions,
+} as const satisfies Record<string, Options>;
 
-export const configureDrainCheckCommand = (context: CommandContext) => {
+type DrainCheckSchema = InferredOptionTypes<typeof drainCheckOptions>;
+
+export const createDrainCheckCommand = (
+  context: CommandContext,
+): CommandModule<object, DrainCheckSchema> => {
   return {
     command: DRAIN_CHECK_ID,
-    description: "Analyze contract for drain vulnerabilities",
-    builder: (yargs: Argv) =>
-      yargs
-        .option("timeout", {
-          alias: "t",
-          type: "number",
-          description: "Analysis timeout in seconds",
-        })
-        .option("contract", {
-          alias: "c",
-          type: "string",
-          description: "Contract name",
-          demandOption: true,
-        })
-        .option("verbose", {
-          alias: "v",
-          type: "boolean",
-          description: "Use debug output in TSA log",
-        })
-        .option("disable-opcode-extraction", {
-          type: "boolean",
-          description:
-            "Disable opcode extraction. This affects path selection strategy and default timeout.",
-        }),
-    handler: async (argv: yargs.ArgumentsCamelCase) => {
-      await drainCheckCommand(context, argv);
+    describe: "Analyze contract for drain vulnerabilities",
+    builder: drainCheckOptions,
+    handler: async (argv: DrainCheckSchema) => {
+      await drainCheckCommand(context.ui, argv);
     },
   };
 };
 
 /**
  * Runs drain check analysis and returns the analyzer wrapper
- * @param contractName - Name of the contract
- * @param contractPath - Path to the compiled contract
  * @param ui - UI provider
- * @param timeout - Analysis timeout in seconds
- * @param opcodes - List of opcodes to analyze
- * @param verbose - Enable verbose output
+ * @param contractPath - Path to the compiled contract
+ * @param commonArgs
+ * @param completionMessage
  * @returns AnalyzerWrapper instance
  */
 export const runDrainCheckAnalysis = async (
-  contractName: string,
-  contractPath: string,
   ui: UIProvider,
-  timeout: number | null,
-  opcodes: number[],
-  verbose: boolean = false,
-  completionMessage: string = "Analysis complete.",
+  contractPath: string,
+  commonArgs: CommonAnalyzerRecvInternalArgs,
+  completionMessage: string = "Analysis complete",
 ): Promise<AnalyzerWrapper> => {
+  const contractName = commonArgs.contract;
   const checkerPath = getCheckerPath(DRAIN_CHECK_SYMBOLIC_FILENAME);
 
   const properties: TreeProperty[] = [
@@ -91,25 +77,16 @@ export const runDrainCheckAnalysis = async (
     {
       key: "Options",
       separator: true,
-      children: [
-        {
-          key: "Timeout",
-          value: timeout !== null ? `${timeout} seconds` : "not set",
-        },
-      ],
+      children: [...generateOptionsForPropertyTree(commonArgs)],
     },
   ];
-
-  const checkerCell = beginCell().endCell();
-
   const analyzer = new AnalyzerWrapper({
     ui,
     checkerPath,
-    checkerCell,
+    checkerCell: beginCell().endCell(),
     properties,
     codePath: contractPath,
   });
-
   const reportDir = getReportDirectory(analyzer.id);
   const sarifPath = getSarifReportPath(analyzer.id);
 
@@ -127,92 +104,63 @@ export const runDrainCheckAnalysis = async (
       wrapper.getTempCheckerCellPath(),
       "--output",
       sarifPath,
-      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
       "--exported-inputs",
       reportDir,
-      ...(verbose ? ["-v"] : []),
-      ...opcodes.flatMap((opcode) => ["--opcode", opcode.toString()]),
+      ...generateFlagsFromCommonRecvInternalArgs(commonArgs),
     ],
     completionMessage,
   );
 
   // Write reproduction config if vulnerability is found
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
   if (vulnerability) {
-    writeReproduceConfig(vulnerability, DRAIN_CHECK_ID, timeout, analyzer.id, {
-      kind: DRAIN_CHECK_ID,
-    });
+    writeReproduceConfig(
+      vulnerability,
+      DRAIN_CHECK_ID,
+      commonArgs.timeout,
+      analyzer.id,
+      {
+        kind: DRAIN_CHECK_ID,
+      },
+    );
   }
 
   return analyzer;
 };
 
-const drainCheckCommand: CommandHandler = async (
-  context: CommandContext,
-  parsedArgs: any,
+const drainCheckCommand = async (
+  ui: UIProvider,
+  parsedArgs: DrainCheckSchema,
 ) => {
-  const { ui } = context;
+  const contractName = parsedArgs.contract;
 
-  await buildContracts(ui);
+  await buildAllContracts(ui);
+  const contractPath = resolveBuiltContract(ui, contractName);
 
-  if (!parsedArgs.contract) {
-    throw new Error("Contract name or path is required");
-  }
-  const contract = parsedArgs.contract;
-  const contractPath = findCompiledContract(contract);
-
-  if (!existsSync(contractPath)) {
-    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
-    process.exit(1);
-  }
-
-  let opcodes: number[] = [];
-  if (!parsedArgs["disable-opcode-extraction"]) {
-    opcodes = await extractOpcodes({
-      ui,
-      codePath: contractPath,
-      contractName: contract,
-    });
-  }
-
-  let timeout = parsedArgs.timeout ?? null;
-
-  // If timeout wasn't provided, set it to 1 minute * (number_of_opcodes + 1)
-  if (timeout === null && opcodes.length > 0) {
-    timeout = ONE_MINUTE_SECONDS * (opcodes.length + 1);
-    ui.write("");
-    ui.write(
-      "The timeout was calculated automatically based on the number of opcodes.",
-    );
-  }
-
-  const analyzer = await runDrainCheckAnalysis(
-    contract,
-    contractPath,
+  const { opcodes, timeout } = await resolveOpcodesAndTimeout(
     ui,
-    timeout,
-    opcodes,
-    parsedArgs.verbose,
+    contractName,
+    contractPath,
+    {
+      disableOpcodeExtraction: parsedArgs["disable-opcode-extraction"],
+      explicitTimeout: parsedArgs.timeout,
+    },
   );
 
-  const vulnerability = analyzer.getVulnerability();
-  analyzer.reportVulnerability(vulnerability, DRAIN_DESCRIPTION_URL);
-
-  printCleanupInstructions(ui);
-
-  if (vulnerability != null) {
-    printReproductionInstructions(ui, analyzer.id);
-
-    process.exit(2);
-  }
+  const analyzer = await runDrainCheckAnalysis(ui, contractPath, {
+    timeout,
+    opcodes,
+    verbose: parsedArgs.verbose,
+    contract: contractName,
+  });
+  reportAndExit(ui, analyzer, DRAIN_DESCRIPTION_URL);
 };
 
 export const drainCheckConcrete = async (
+  ui: UIProvider,
   config: ConcreteAnalysisConfig,
-  completionMessage: string = "Analysis complete.",
+  completionMessage: string = "Analysis complete",
 ): Promise<ReproduceParameters | null> => {
-  const { ui } = config;
-
   if (!existsSync(config.codePath)) {
     ui.write(`\n${Sym.ERR} Code at ${config.codePath} not found`);
     process.exit(1);
@@ -236,8 +184,9 @@ export const drainCheckConcrete = async (
     },
   ];
 
-  const maxTons = toNano(
-    await ui.input("Enter maximum amount of TONs for reproduction message:"),
+  const maxTons = await readNanotons(
+    "Enter maximum amount of TONs for reproduction message:",
+    ui,
   );
 
   const checkerPath = getCheckerPath(DRAIN_CHECK_CONCRETE_FILENAME);
@@ -283,7 +232,7 @@ export const drainCheckConcrete = async (
     completionMessage,
   );
 
-  const vulnerability = analyzer.getVulnerability();
+  const vulnerability = analyzer.getVulnerabilityFromReport();
   if (vulnerability == null) {
     ui.write(
       `${Sym.WARN} Vulnerability couldn't be reproduced with concrete data.`,

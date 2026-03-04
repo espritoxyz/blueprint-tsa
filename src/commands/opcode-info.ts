@@ -1,7 +1,6 @@
-import { Argv } from "yargs";
-import yargs from "yargs";
+import { CommandModule, InferredOptionTypes, Options } from "yargs";
 import path from "path";
-import { CommandContext, CommandHandler } from "../cli.js";
+import { CommandContext } from "../cli.js";
 import {
   OPCODE_INFO,
   Sym,
@@ -11,7 +10,7 @@ import {
 } from "../common/constants.js";
 import { UIProvider } from "@ton/blueprint";
 import { extractOpcodes } from "../common/opcode-extractor.js";
-import { buildContracts } from "../common/build-utils.js";
+import { buildAllContracts } from "../common/build-utils.js";
 import {
   findCompiledContract,
   getSarifReportPath,
@@ -25,12 +24,32 @@ import { beginCell } from "@ton/core";
 import { TreeProperty } from "../common/draw.js";
 import { formatOpcodeHex } from "../common/format-utils.js";
 import { findNonFailingExecution } from "../common/result-parsing.js";
+import { commonAnalyzerCliOptions } from "./common-analyzer-args.js";
 
 export interface OpcodeInfo {
   opcode: number;
   withAuthorization: boolean;
   vulnerabilityPath?: string;
 }
+
+const opcodeInfoCliOptions = {
+  ...commonAnalyzerCliOptions,
+} as const satisfies Record<string, Options>;
+
+type OpcodeInfoSchema = InferredOptionTypes<typeof opcodeInfoCliOptions>;
+
+export const createOpcodeInfoCommand = (
+  context: CommandContext,
+): CommandModule<object, OpcodeInfoSchema> => {
+  return {
+    command: OPCODE_INFO,
+    describe: "Display information about contract opcodes",
+    builder: opcodeInfoCliOptions,
+    handler: async (argv: OpcodeInfoSchema) => {
+      await opcodeInfoHandler(context, argv);
+    },
+  };
+};
 
 export async function runOpcodeAuthorizationCheckAnalysis(
   opcode: number,
@@ -106,7 +125,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
   const withAuthorization = !vulnerability;
   let vulnerabilityPath: string | undefined;
   if (vulnerability) {
-    const vulnDesc = analyzer.getVulnerability();
+    const vulnDesc = analyzer.getVulnerabilityFromReport();
     if (vulnDesc) {
       vulnerabilityPath = getInputsPath(analyzer.id, vulnDesc.executionIndex);
     }
@@ -197,14 +216,14 @@ export function formatOpcodeInfo(infos: OpcodeInfo[]): string {
   return lines.join("\n");
 }
 
-const opcodeInfoHandler: CommandHandler = async (
+const opcodeInfoHandler = async (
   context: CommandContext,
-  args: yargs.ArgumentsCamelCase,
+  args: OpcodeInfoSchema,
 ) => {
   const { ui } = context;
   const { timeout, contract, verbose } = args;
 
-  await buildContracts(ui);
+  await buildAllContracts(ui);
   const codePath = findCompiledContract(contract as string);
 
   if (!existsSync(codePath)) {
@@ -236,33 +255,4 @@ const opcodeInfoHandler: CommandHandler = async (
   ui.write("");
   const output = formatOpcodeInfo(infos);
   ui.write(output);
-};
-
-export const configureOpcodeInfoCommand = (context: CommandContext) => {
-  return {
-    command: OPCODE_INFO,
-    description: "Display information about contract opcodes",
-    builder: (yargs: Argv) =>
-      yargs
-        .option("contract", {
-          alias: "c",
-          type: "string",
-          description: "Contract name",
-          demandOption: true,
-        })
-        .option("timeout", {
-          alias: "t",
-          type: "number",
-          description: "Timeout in seconds for analyzing one opcode",
-          default: 60,
-        })
-        .option("verbose", {
-          alias: "v",
-          type: "boolean",
-          description: "Use debug output in TSA log",
-        }),
-    handler: async (argv: yargs.ArgumentsCamelCase) => {
-      await opcodeInfoHandler(context, argv);
-    },
-  };
 };
