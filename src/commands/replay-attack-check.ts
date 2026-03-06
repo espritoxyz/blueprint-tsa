@@ -23,7 +23,11 @@ import {
   generateFlagsFromCommonArgs,
   generateOptionsForPropertyTree,
 } from "./common-analyzer-args.js";
-import { resolveBuiltContract, reportAndExit } from "./command-utils.js";
+import {
+  resolveBuiltContract,
+  reportAndExit,
+  confirmLongRunningAnalysis,
+} from "./command-utils.js";
 
 const replayAttackCheckCliOptions = {
   "seqno-method-name": {
@@ -179,6 +183,14 @@ const replayAttackCheckCommand = async (
     parsedArgs["seqno-restriction"],
   );
 
+  await confirmLongRunningAnalysis(ui, {
+    commandLabel: REPLAY_ATTACK_CHECK_ID,
+    contractName,
+    timeoutSeconds: timeout,
+    checkCount: 1,
+    interactive: parsedArgs.interactive,
+  });
+
   const analyzer = await runReplayAttackCheckAnalysis(
     ui,
     contractPath,
@@ -188,6 +200,7 @@ const replayAttackCheckCommand = async (
       contract: contractName,
       iterationLimit: parsedArgs["iteration-limit"],
       recursionLimit: parsedArgs["recursion-limit"],
+      interactive: parsedArgs.interactive,
     },
     seqnoData,
   );
