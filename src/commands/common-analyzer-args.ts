@@ -1,5 +1,9 @@
 import { TreeProperty } from "../common/draw.js";
 import { Options } from "yargs";
+import {
+  DEFAULT_ITERATION_LIMIT,
+  DEFAULT_RECURSION_LIMIT,
+} from "../common/constants.js";
 
 export interface CommonAnalyzerArgs {
   timeout: number | null;
@@ -51,10 +55,7 @@ export function generateOptionsForPropertyTree(
     },
     {
       key: "Recursion Limit",
-      value:
-        commonArgs.recursionLimit !== null
-          ? commonArgs.recursionLimit.toString()
-          : "not set",
+      value: commonArgs.recursionLimit.toString(),
     },
   ];
 }
@@ -79,12 +80,12 @@ export const commonAnalyzerCliOptions = {
   "iteration-limit": {
     type: "number",
     description: "Iteration limit",
-    default: 2,
+    default: DEFAULT_ITERATION_LIMIT,
   },
   "recursion-limit": {
     type: "number",
     description: "Recursion limit",
-    default: 1,
+    default: DEFAULT_RECURSION_LIMIT,
   },
 } as const satisfies Record<string, Options>;
 
