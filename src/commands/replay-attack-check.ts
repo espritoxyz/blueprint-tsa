@@ -186,8 +186,8 @@ const replayAttackCheckCommand = async (
       timeout,
       verbose: parsedArgs.verbose,
       contract: contractName,
-      iterationLimit: parsedArgs["iteration-limit"] ?? null,
-      recursionLimit: parsedArgs["recursion-limit"] ?? null,
+      iterationLimit: parsedArgs["iteration-limit"],
+      recursionLimit: parsedArgs["recursion-limit"],
     },
     seqnoData,
   );

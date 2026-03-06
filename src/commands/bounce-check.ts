@@ -165,8 +165,8 @@ const bounceCheckCommand = async (
     opcodes,
     contract: contractName,
     verbose: parsedArgs.verbose,
-    iterationLimit: parsedArgs["iteration-limit"] ?? null,
-    recursionLimit: parsedArgs["recursion-limit"] ?? null,
+    iterationLimit: parsedArgs["iteration-limit"],
+    recursionLimit: parsedArgs["recursion-limit"],
   });
   reportAndExit(ui, analyzer, BOUNCE_DESCRIPTION_URL);
 };

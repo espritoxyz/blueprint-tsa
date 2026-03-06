@@ -177,8 +177,8 @@ const ownerHijackCheckCommand = async (
       opcodes,
       verbose: parsedArgs.verbose,
       contract: contractName,
-      iterationLimit: parsedArgs["iteration-limit"] ?? null,
-      recursionLimit: parsedArgs["recursion-limit"] ?? null,
+      iterationLimit: parsedArgs["iteration-limit"],
+      recursionLimit: parsedArgs["recursion-limit"],
     },
   );
   reportAndExit(ui, analyzer, OWNER_HIJACK_DESCRIPTION_URL);

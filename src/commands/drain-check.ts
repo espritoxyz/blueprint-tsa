@@ -154,8 +154,8 @@ const drainCheckCommand = async (
     opcodes,
     verbose: parsedArgs.verbose,
     contract: contractName,
-    iterationLimit: parsedArgs["iteration-limit"] ?? null,
-    recursionLimit: parsedArgs["recursion-limit"] ?? null,
+    iterationLimit: parsedArgs["iteration-limit"],
+    recursionLimit: parsedArgs["recursion-limit"],
   };
   const analyzer = await runDrainCheckAnalysis(ui, contractPath, commonArgs);
   reportAndExit(ui, analyzer, DRAIN_DESCRIPTION_URL);

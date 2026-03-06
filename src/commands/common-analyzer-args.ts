@@ -5,8 +5,8 @@ export interface CommonAnalyzerArgs {
   timeout: number | null;
   verbose?: boolean;
   contract: string;
-  iterationLimit: number | null;
-  recursionLimit: number | null;
+  iterationLimit: number;
+  recursionLimit: number;
 }
 
 export interface CommonAnalyzerRecvInternalArgs extends CommonAnalyzerArgs {
@@ -21,12 +21,8 @@ export function generateFlagsFromCommonArgs(
       ? ["--timeout", commonArgs.timeout.toString()]
       : []),
     ...(commonArgs.verbose ? ["-v"] : []),
-    ...(commonArgs.iterationLimit
-      ? ["--iteration-limit", commonArgs.iterationLimit.toString()]
-      : []),
-    ...(commonArgs.recursionLimit
-      ? ["--max-recursion-depth", commonArgs.recursionLimit.toString()]
-      : []),
+    ...["--iteration-limit", commonArgs.iterationLimit.toString()],
+    ...["--max-recursion-depth", commonArgs.recursionLimit.toString()],
   ];
 }
 
@@ -51,10 +47,7 @@ export function generateOptionsForPropertyTree(
     },
     {
       key: "Iteration Limit",
-      value:
-        commonArgs.iterationLimit !== null
-          ? commonArgs.iterationLimit.toString()
-          : "not set",
+      value: commonArgs.iterationLimit.toString(),
     },
     {
       key: "Recursion Limit",
@@ -86,10 +79,12 @@ export const commonAnalyzerCliOptions = {
   "iteration-limit": {
     type: "number",
     description: "Iteration limit",
+    default: 2,
   },
   "recursion-limit": {
     type: "number",
     description: "Recursion limit",
+    default: 1,
   },
 } as const satisfies Record<string, Options>;
 
