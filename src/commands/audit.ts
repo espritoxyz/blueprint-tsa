@@ -226,11 +226,19 @@ async function runReplayAttackCheck(
   ui: UIProvider,
   timeout: number | null,
   verbose: boolean,
+  iterationLimit: number,
+  recursionLimit: number,
 ): Promise<CheckResult> {
   const analyzer = await runReplayAttackCheckAnalysis(
     ui,
     contractPath,
-    { timeout, verbose, contract: contractName },
+    {
+      timeout,
+      verbose,
+      contract: contractName,
+      iterationLimit,
+      recursionLimit,
+    },
     null,
     `${REPLAY_ATTACK_CHECK_NAME} completed.`,
   );
@@ -452,7 +460,10 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     opcodes,
     verbose,
     contract: contractName,
+    iterationLimit: parsedArgs["iteration-limit"],
+    recursionLimit: parsedArgs["recursion-limit"],
   };
+
   const drainResult = await runDrainCheck(
     contractName,
     contractPath,
@@ -470,6 +481,8 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     ui,
     effectiveTimeout,
     verbose ?? false,
+    commonArgs.iterationLimit,
+    commonArgs.recursionLimit,
   );
   summary.checks.push(replayResult);
 

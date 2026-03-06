@@ -182,7 +182,13 @@ const replayAttackCheckCommand = async (
   const analyzer = await runReplayAttackCheckAnalysis(
     ui,
     contractPath,
-    { timeout, verbose: parsedArgs.verbose, contract: contractName },
+    {
+      timeout,
+      verbose: parsedArgs.verbose,
+      contract: contractName,
+      iterationLimit: parsedArgs["iteration-limit"],
+      recursionLimit: parsedArgs["recursion-limit"],
+    },
     seqnoData,
   );
 

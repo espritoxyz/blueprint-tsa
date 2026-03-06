@@ -122,6 +122,8 @@ export const runDrainCheckAnalysis = async (
       {
         kind: DRAIN_CHECK_ID,
       },
+      commonArgs.iterationLimit,
+      commonArgs.recursionLimit,
     );
   }
 
@@ -147,12 +149,15 @@ const drainCheckCommand = async (
     },
   );
 
-  const analyzer = await runDrainCheckAnalysis(ui, contractPath, {
+  const commonArgs: CommonAnalyzerRecvInternalArgs = {
     timeout,
     opcodes,
     verbose: parsedArgs.verbose,
     contract: contractName,
-  });
+    iterationLimit: parsedArgs["iteration-limit"],
+    recursionLimit: parsedArgs["recursion-limit"],
+  };
+  const analyzer = await runDrainCheckAnalysis(ui, contractPath, commonArgs);
   reportAndExit(ui, analyzer, DRAIN_DESCRIPTION_URL);
 };
 
@@ -227,6 +232,12 @@ export const drainCheckConcrete = async (
       getReportDirectory(wrapper.id),
       ...(config.timeout != null
         ? ["--timeout", config.timeout.toString()]
+        : []),
+      ...(config.iterationLimit != null
+        ? ["--iteration-limit", config.iterationLimit.toString()]
+        : []),
+      ...(config.recursionLimit != null
+        ? ["--max-recursion-depth", config.recursionLimit.toString()]
         : []),
     ],
     completionMessage,
