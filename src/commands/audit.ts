@@ -46,7 +46,12 @@ import {
   CommonAnalyzerRecvInternalArgs,
 } from "./common-analyzer-args.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
-import { ONE_MINUTE_SECONDS } from "./command-utils.js";
+import {
+  ONE_MINUTE_SECONDS,
+  confirmLongRunningAnalysis,
+  confirmOpcodeExtractionWait,
+  hasExplicitTimeout,
+} from "./command-utils.js";
 
 interface CheckResult {
   name: string;
@@ -413,9 +418,31 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     process.exit(1);
   }
 
+  const checkCount = ownerMethod ? 5 : 4;
+  const explicitTimeout = parsedArgs.timeout ?? null;
+  const hasUserProvidedTimeout = hasExplicitTimeout(explicitTimeout);
+
+  if (hasUserProvidedTimeout && explicitTimeout !== null) {
+    await confirmLongRunningAnalysis(ui, {
+      commandLabel: AUDIT_ID,
+      contractName,
+      timeoutSeconds: explicitTimeout * checkCount,
+      checkCount,
+      interactive: parsedArgs.interactive,
+    });
+  }
+
   // Extract opcodes if not disabled
   let opcodes: number[] = [];
   if (!disableOpcodeExtraction) {
+    if (!hasUserProvidedTimeout) {
+      await confirmOpcodeExtractionWait(ui, {
+        commandLabel: AUDIT_ID,
+        contractName,
+        interactive: parsedArgs.interactive,
+      });
+    }
+
     opcodes = await extractOpcodes({
       ui,
       codePath: contractPath,
@@ -434,6 +461,20 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     );
   }
 
+  const totalEstimatedTimeout =
+    effectiveTimeout === null ? null : effectiveTimeout * checkCount;
+
+  if (!hasUserProvidedTimeout) {
+    await confirmLongRunningAnalysis(ui, {
+      commandLabel: AUDIT_ID,
+      contractName,
+      timeoutSeconds: totalEstimatedTimeout,
+      opcodeCount: opcodes.length,
+      checkCount,
+      interactive: parsedArgs.interactive,
+    });
+  }
+
   const summary: AuditSummary = {
     contract: contractName,
     checks: [],
@@ -442,7 +483,9 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
 
   // Run opcode-info check
   ui.write("");
-  ui.write(`${Sym.WAIT} Running opcode authorization analysis...`);
+  ui.write(
+    `${Sym.WAIT} Step 1/${checkCount}: running opcode authorization analysis...`,
+  );
   summary.opcodeInfo = await runOpcodeInfoCheck(
     contractName,
     contractPath,
@@ -454,7 +497,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
 
   // Run drain-check
   ui.write("");
-  ui.write(`${Sym.WAIT} Running drain check...`);
+  ui.write(`${Sym.WAIT} Step 2/${checkCount}: running drain check...`);
   const commonArgs: CommonAnalyzerRecvInternalArgs = {
     timeout: effectiveTimeout,
     opcodes,
@@ -462,6 +505,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     contract: contractName,
     iterationLimit: parsedArgs["iteration-limit"],
     recursionLimit: parsedArgs["recursion-limit"],
+    interactive: parsedArgs.interactive,
   };
 
   const drainResult = await runDrainCheck(
@@ -474,7 +518,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
 
   // Run replay-attack-check
   ui.write("");
-  ui.write(`${Sym.WAIT} Running replay attack check...`);
+  ui.write(`${Sym.WAIT} Step 3/${checkCount}: running replay attack check...`);
   const replayResult = await runReplayAttackCheck(
     contractName,
     contractPath,
@@ -488,7 +532,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
 
   // Run bounce-check
   ui.write("");
-  ui.write(`${Sym.WAIT} Running bounce check...`);
+  ui.write(`${Sym.WAIT} Step 4/${checkCount}: running bounce check...`);
   const bounceResult = await runBounceCheck(
     contractName,
     contractPath,
@@ -500,7 +544,9 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
   // Run owner-hijack-check if owner method is provided
   if (ownerMethod) {
     ui.write("");
-    ui.write(`${Sym.WAIT} Running owner hijack check...`);
+    ui.write(
+      `${Sym.WAIT} Step 5/${checkCount}: running owner hijack check...`,
+    );
     const ownerResult = await runOwnerHijackCheck(
       contractName,
       contractPath,

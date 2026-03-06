@@ -35,6 +35,8 @@ import {
   resolveBuiltContract,
   resolveOpcodesAndTimeout,
   reportAndExit,
+  confirmLongRunningAnalysis,
+  hasExplicitTimeout,
 } from "./command-utils.js";
 import { tmpdir } from "os";
 import path from "path";
@@ -157,8 +159,21 @@ const bounceCheckCommand = async (
     {
       disableOpcodeExtraction: parsedArgs["disable-opcode-extraction"],
       explicitTimeout: parsedArgs.timeout,
+      commandLabel: BOUNCE_CHECK_ID,
+      interactive: parsedArgs.interactive,
     },
   );
+
+  if (!hasExplicitTimeout(parsedArgs.timeout)) {
+    await confirmLongRunningAnalysis(ui, {
+      commandLabel: BOUNCE_CHECK_ID,
+      contractName,
+      timeoutSeconds: timeout,
+      opcodeCount: opcodes.length,
+      checkCount: 1,
+      interactive: parsedArgs.interactive,
+    });
+  }
 
   const analyzer = await runBounceCheckAnalysis(ui, contractPath, {
     timeout,
@@ -167,6 +182,7 @@ const bounceCheckCommand = async (
     verbose: parsedArgs.verbose,
     iterationLimit: parsedArgs["iteration-limit"],
     recursionLimit: parsedArgs["recursion-limit"],
+    interactive: parsedArgs.interactive,
   });
   reportAndExit(ui, analyzer, BOUNCE_DESCRIPTION_URL);
 };

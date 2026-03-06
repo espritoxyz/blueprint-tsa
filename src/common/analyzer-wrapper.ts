@@ -48,10 +48,25 @@ export interface VulnerabilityDescription {
  * Generic wrapper for checker-based vulnerability analysis
  * Handles common logic for compiling, running, and cleaning up checker analysis
  */
+const ANALYZER_PREPARATION_MESSAGE =
+  "Preparing analyzer inputs and temporary files...";
+const ANALYZER_ARGUMENTS_READY_MESSAGE =
+  "Analyzer inputs are ready. Launching TSA...";
+const ANALYZER_RUNNING_MESSAGE = "Running TSA analysis...";
+const ANALYZER_SUCCESS_LOG_PREFIX = "TSA run log saved to:";
+const ANALYZER_NON_EMPTY_LOG_MESSAGE =
+  "TSA produced additional log output. Check the log file for details.";
+const PROGRESS_BAR_WIDTH = 20;
+const PROGRESS_UPDATE_INTERVAL_MS = 1000;
+const PROGRESS_COMPLETION_DISPLAY_MS = 500;
+const MILLISECONDS_PER_SECOND = 1000;
+const FULL_PROGRESS_PERCENT = 100;
+
 export class AnalyzerWrapper {
   private config: AnalyzerWrapperConfig;
   private tempBocPath: string | null = null;
   private tempCheckerCellPath: string | null = null;
+  private progressTimer: ReturnType<typeof setInterval> | null = null;
   id: string;
 
   constructor(config: AnalyzerWrapperConfig) {
@@ -162,6 +177,78 @@ export class AnalyzerWrapper {
     return this.tempCheckerCellPath;
   }
 
+  private formatProgressBar(progressRatio: number): string {
+    const boundedProgressRatio = Math.min(Math.max(progressRatio, 0), 1);
+    const percent = Math.min(
+      Math.round(boundedProgressRatio * FULL_PROGRESS_PERCENT),
+      FULL_PROGRESS_PERCENT,
+    );
+    const filledSegments = Math.round(
+      boundedProgressRatio * PROGRESS_BAR_WIDTH,
+    );
+    const emptySegments = PROGRESS_BAR_WIDTH - filledSegments;
+    const progressBar = `${"█".repeat(filledSegments)}${"░".repeat(emptySegments)}`;
+
+    return `[${progressBar}] ${percent}%`;
+  }
+
+  private formatElapsedProgress(elapsedSeconds: number, timeoutSeconds: number): string {
+    const boundedElapsedSeconds = Math.max(0, elapsedSeconds);
+    const boundedTimeoutSeconds = Math.max(1, timeoutSeconds);
+    const progressRatio = boundedElapsedSeconds / boundedTimeoutSeconds;
+
+    return `${ANALYZER_RUNNING_MESSAGE} ${this.formatProgressBar(progressRatio)} (${boundedElapsedSeconds}s/${boundedTimeoutSeconds}s)`;
+  }
+
+  private startProgressBar(timeoutSeconds: number | null): void {
+    this.stopProgressBar();
+
+    if (timeoutSeconds === null) {
+      this.config.ui.setActionPrompt(`${Sym.WAIT} ${ANALYZER_RUNNING_MESSAGE}`);
+      return;
+    }
+
+    const startedAt = Date.now();
+    const updateProgress = () => {
+      const elapsedMilliseconds = Date.now() - startedAt;
+      const elapsedSeconds = Math.floor(
+        elapsedMilliseconds / MILLISECONDS_PER_SECOND,
+      );
+      this.config.ui.setActionPrompt(
+        `${Sym.WAIT} ${this.formatElapsedProgress(elapsedSeconds, timeoutSeconds)}`,
+      );
+    };
+
+    updateProgress();
+    this.progressTimer = setInterval(
+      updateProgress,
+      PROGRESS_UPDATE_INTERVAL_MS,
+    );
+  }
+
+  private stopProgressBar(): void {
+    if (this.progressTimer !== null) {
+      clearInterval(this.progressTimer);
+      this.progressTimer = null;
+    }
+  }
+
+  private async showCompletedProgressBar(timeoutSeconds: number | null): Promise<void> {
+    this.stopProgressBar();
+
+    if (timeoutSeconds === null) {
+      return;
+    }
+
+    this.config.ui.setActionPrompt(
+      `${Sym.WAIT} ${ANALYZER_RUNNING_MESSAGE} ${this.formatProgressBar(1)}`,
+    );
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, PROGRESS_COMPLETION_DISPLAY_MS);
+    });
+  }
+
   /**
    * Runs the checker analysis with custom analyzer arguments
    * @param checkerFilename - Name of the checker file to compile
@@ -174,6 +261,8 @@ export class AnalyzerWrapper {
   ): Promise<void> {
     this.printAnalysisInfo();
     this.validateCheckerFile();
+
+    this.config.ui.write(`${Sym.WAIT} ${ANALYZER_PREPARATION_MESSAGE}`);
     if (checkerFilename != null) {
       await this.compileChecker(checkerFilename);
     }
@@ -181,23 +270,37 @@ export class AnalyzerWrapper {
 
     try {
       this.config.ui.clearActionPrompt();
-      this.config.ui.setActionPrompt(`${Sym.WAIT} Running analysis...`);
+      this.config.ui.write(`${Sym.WAIT} ${ANALYZER_ARGUMENTS_READY_MESSAGE}`);
 
       const analyzerArgs = buildArgs(this);
+      const timeoutIndex = analyzerArgs.indexOf("--timeout");
+      const timeoutValue =
+        timeoutIndex >= 0 ? analyzerArgs[timeoutIndex + 1] ?? null : null;
+      const timeoutSeconds =
+        timeoutValue !== null ? Number.parseInt(timeoutValue, 10) : null;
       const analyzer = await Analyzer.create();
       const logPath = getTsaRunLogPath(this.id);
+
+      this.startProgressBar(
+        Number.isFinite(timeoutSeconds) ? timeoutSeconds : null,
+      );
       const result = await analyzer.run(analyzerArgs, logPath);
 
       writeFileSync(logPath, result.stdout);
 
+      await this.showCompletedProgressBar(
+        Number.isFinite(timeoutSeconds) ? timeoutSeconds : null,
+      );
       this.config.ui.clearActionPrompt();
       this.config.ui.write(`${Sym.OK} ${completionMessage}`);
-      this.config.ui.write(`TSA run log available at: ${logPath}`);
+      this.config.ui.write(`${ANALYZER_SUCCESS_LOG_PREFIX} ${logPath}`);
 
       if (result.stdout.trim().length > 0) {
-        this.config.ui.write(`${Sym.WARN} Log file is not empty.`);
+        this.config.ui.write(`${Sym.WARN} ${ANALYZER_NON_EMPTY_LOG_MESSAGE}`);
       }
     } finally {
+      this.stopProgressBar();
+      this.config.ui.clearActionPrompt();
       this.cleanup();
     }
   }

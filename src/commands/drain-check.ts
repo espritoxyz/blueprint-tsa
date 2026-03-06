@@ -33,6 +33,8 @@ import {
   resolveOpcodesAndTimeout,
   reportAndExit,
   readNanotons,
+  confirmLongRunningAnalysis,
+  hasExplicitTimeout,
 } from "./command-utils.js";
 
 const drainCheckOptions = {
@@ -146,8 +148,21 @@ const drainCheckCommand = async (
     {
       disableOpcodeExtraction: parsedArgs["disable-opcode-extraction"],
       explicitTimeout: parsedArgs.timeout,
+      commandLabel: DRAIN_CHECK_ID,
+      interactive: parsedArgs.interactive,
     },
   );
+
+  if (!hasExplicitTimeout(parsedArgs.timeout)) {
+    await confirmLongRunningAnalysis(ui, {
+      commandLabel: DRAIN_CHECK_ID,
+      contractName,
+      timeoutSeconds: timeout,
+      opcodeCount: opcodes.length,
+      checkCount: 1,
+      interactive: parsedArgs.interactive,
+    });
+  }
 
   const commonArgs: CommonAnalyzerRecvInternalArgs = {
     timeout,
@@ -157,7 +172,9 @@ const drainCheckCommand = async (
     iterationLimit: parsedArgs["iteration-limit"],
     recursionLimit: parsedArgs["recursion-limit"],
   };
+
   const analyzer = await runDrainCheckAnalysis(ui, contractPath, commonArgs);
+
   reportAndExit(ui, analyzer, DRAIN_DESCRIPTION_URL);
 };
 

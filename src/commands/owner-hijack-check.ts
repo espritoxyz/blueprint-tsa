@@ -33,6 +33,8 @@ import {
   resolveOpcodesAndTimeout,
   reportAndExit,
   readNanotons,
+  confirmLongRunningAnalysis,
+  hasExplicitTimeout,
 } from "./command-utils.js";
 import { OwnerHijackOptions } from "../reproduce/reproduce-config.js";
 
@@ -165,8 +167,21 @@ const ownerHijackCheckCommand = async (
     {
       disableOpcodeExtraction: parsedArgs["disable-opcode-extraction"],
       explicitTimeout: parsedArgs.timeout,
+      commandLabel: OWNER_HIJACK_CHECK_ID,
+      interactive: parsedArgs.interactive,
     },
   );
+
+  if (!hasExplicitTimeout(parsedArgs.timeout)) {
+    await confirmLongRunningAnalysis(ui, {
+      commandLabel: OWNER_HIJACK_CHECK_ID,
+      contractName,
+      timeoutSeconds: timeout,
+      opcodeCount: opcodes.length,
+      checkCount: 1,
+      interactive: parsedArgs.interactive,
+    });
+  }
 
   const analyzer = await runOwnerHijackCheckAnalysis(
     ui,
@@ -179,6 +194,7 @@ const ownerHijackCheckCommand = async (
       contract: contractName,
       iterationLimit: parsedArgs["iteration-limit"],
       recursionLimit: parsedArgs["recursion-limit"],
+      interactive: parsedArgs.interactive,
     },
   );
   reportAndExit(ui, analyzer, OWNER_HIJACK_DESCRIPTION_URL);
