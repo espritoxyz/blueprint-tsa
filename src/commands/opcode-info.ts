@@ -27,8 +27,17 @@ import { formatOpcodeHex } from "../common/format-utils.js";
 import { findNonFailingExecution } from "../common/result-parsing.js";
 import {
   commonAnalyzerCliOptions,
+  CommonAnalyzerArgs,
+  generateFlagsFromCommonArgs,
+  generateOptionsForPropertyTree,
+  ITERATION_LIMIT_OPTION,
+  RECURSION_LIMIT_OPTION,
   VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
+import {
+  confirmLongRunningAnalysis,
+  confirmOpcodeExtractionWait,
+} from "./command-utils.js";
 
 export interface OpcodeInfo {
   opcode: number;
@@ -36,8 +45,17 @@ export interface OpcodeInfo {
   vulnerabilityPath?: string;
 }
 
+const DEFAULT_OPCODE_TIMEOUT_SECONDS = 60;
+const OPCODE_TIMEOUT_OPTION_DESCRIPTION =
+  "Analysis timeout in seconds for one opcode authorization check";
+
 const opcodeInfoCliOptions = {
   ...commonAnalyzerCliOptions,
+  timeout: {
+    ...commonAnalyzerCliOptions.timeout,
+    default: DEFAULT_OPCODE_TIMEOUT_SECONDS,
+    description: OPCODE_TIMEOUT_OPTION_DESCRIPTION,
+  },
 } as const satisfies Record<string, Options>;
 
 type OpcodeInfoSchema = InferredOptionTypes<typeof opcodeInfoCliOptions>;
@@ -57,14 +75,13 @@ export const createOpcodeInfoCommand = (
 
 export async function runOpcodeAuthorizationCheckAnalysis(
   opcode: number,
-  contractName: string,
   contractPath: string,
   ui: UIProvider,
-  timeout: number | null,
+  commonArgs: CommonAnalyzerArgs,
   completionMessage: string = "Analysis complete.",
-  verbose: boolean = false,
-  legacyAnalysisArtifacts: boolean = false,
 ): Promise<OpcodeInfo | null> {
+  const contractName = commonArgs.contract;
+
   const properties: TreeProperty[] = [
     { key: "Contract", value: contractName },
     { key: "Mode", value: "Opcode Authorization Check" },
@@ -76,10 +93,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
           key: "Opcode",
           value: formatOpcodeHex(opcode),
         },
-        {
-          key: "Timeout",
-          value: timeout !== null ? `${timeout} seconds` : "not set",
-        },
+        ...generateOptionsForPropertyTree(commonArgs),
       ],
     },
   ];
@@ -93,7 +107,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
     checkerCell,
     properties,
     codePath: contractPath,
-    legacyAnalysisArtifacts,
+    legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
   });
 
   const sarifPath = getSarifReportPath(analyzer.id);
@@ -112,11 +126,10 @@ export async function runOpcodeAuthorizationCheckAnalysis(
       wrapper.getTempCheckerCellPath(),
       "--output",
       sarifPath,
-      ...(timeout != null ? ["--timeout", timeout.toString()] : []),
       "--disable-out-message-analysis",
       "--exported-inputs",
       getReportDirectory(wrapper.id),
-      ...(verbose ? ["-v"] : []),
+      ...generateFlagsFromCommonArgs(commonArgs),
     ],
     completionMessage,
   );
@@ -137,7 +150,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
   if (vulnerability) {
     const vulnDesc = analyzer.getVulnerabilityFromReport();
     if (vulnDesc) {
-      vulnerabilityPath = legacyAnalysisArtifacts
+      vulnerabilityPath = commonArgs.legacyAnalysisArtifacts
         ? getInputsPath(analyzer.id, vulnDesc.executionIndex)
         : getCompactTypedInputPath(analyzer.id);
     }
@@ -152,45 +165,28 @@ export async function runOpcodeAuthorizationCheckAnalysis(
 
 async function extractOpcodeInfo(
   opcode: number,
-  contractName: string,
   contractPath: string,
   ui: UIProvider,
-  timeout: number | null,
-  verbose: boolean,
-  legacyAnalysisArtifacts: boolean,
+  commonArgs: CommonAnalyzerArgs,
 ): Promise<OpcodeInfo | null> {
   return runOpcodeAuthorizationCheckAnalysis(
     opcode,
-    contractName,
     contractPath,
     ui,
-    timeout,
+    commonArgs,
     "Analysis complete.",
-    verbose,
-    legacyAnalysisArtifacts,
   );
 }
 
 async function getAllOpcodeInfo(
   opcodes: number[],
-  contractName: string,
   contractPath: string,
   ui: UIProvider,
-  timeout: number | null,
-  verbose: boolean,
-  legacyAnalysisArtifacts: boolean,
+  commonArgs: CommonAnalyzerArgs,
 ): Promise<OpcodeInfo[]> {
   const results: OpcodeInfo[] = [];
   for (const opcode of opcodes) {
-    const info = await extractOpcodeInfo(
-      opcode,
-      contractName,
-      contractPath,
-      ui,
-      timeout,
-      verbose,
-      legacyAnalysisArtifacts,
-    );
+    const info = await extractOpcodeInfo(opcode, contractPath, ui, commonArgs);
     if (info !== null) {
       results.push(info);
     }
@@ -247,6 +243,12 @@ const opcodeInfoHandler = async (
     process.exit(1);
   }
 
+  await confirmOpcodeExtractionWait(ui, {
+    commandLabel: OPCODE_INFO,
+    contractName: contract as string,
+    interactive: args.interactive as boolean,
+  });
+
   const opcodes = await extractOpcodes({
     ui,
     codePath,
@@ -259,15 +261,29 @@ const opcodeInfoHandler = async (
     return;
   }
 
-  const infos = await getAllOpcodeInfo(
-    opcodes,
-    contract as string,
-    codePath,
-    ui,
-    (timeout as number) ?? null,
-    verbose as boolean,
-    args[VERBOSE_ANALYSIS_ARTIFACTS_OPTION] as boolean,
-  );
+  const perOpcodeTimeout =
+    (timeout as number) ?? DEFAULT_OPCODE_TIMEOUT_SECONDS;
+  const totalTimeout = perOpcodeTimeout * opcodes.length;
+  const commonArgs: CommonAnalyzerArgs = {
+    timeout: perOpcodeTimeout,
+    verbose: verbose as boolean,
+    contract: contract as string,
+    iterationLimit: args[ITERATION_LIMIT_OPTION] as number,
+    recursionLimit: args[RECURSION_LIMIT_OPTION] as number,
+    interactive: args.interactive as boolean,
+    legacyAnalysisArtifacts: args[VERBOSE_ANALYSIS_ARTIFACTS_OPTION] as boolean,
+  };
+
+  await confirmLongRunningAnalysis(ui, {
+    commandLabel: OPCODE_INFO,
+    contractName: contract as string,
+    timeoutSeconds: totalTimeout,
+    opcodeCount: opcodes.length,
+    checkCount: opcodes.length,
+    interactive: args.interactive as boolean,
+  });
+
+  const infos = await getAllOpcodeInfo(opcodes, codePath, ui, commonArgs);
 
   ui.write("");
   const output = formatOpcodeInfo(infos);

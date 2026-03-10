@@ -6,8 +6,10 @@ import {
 } from "../common/constants.js";
 
 export const ITERATION_LIMIT_OPTION = "iteration-limit";
-export const RECURSION_LIMIT_OPTION = "recursion-limit";
+export const RECURSION_LIMIT_OPTION = "max-recursion-depth";
 export const VERBOSE_ANALYSIS_ARTIFACTS_OPTION = "verbose-analysis-artifacts";
+export const DEFAULT_TIMEOUT_OPTION_DESCRIPTION =
+  "Overall analysis timeout in seconds";
 
 export interface CommonAnalyzerArgs {
   timeout: number | null;
@@ -70,7 +72,7 @@ export const commonAnalyzerCliOptions = {
   timeout: {
     alias: "t",
     type: "number",
-    description: "Analysis timeout in seconds",
+    description: DEFAULT_TIMEOUT_OPTION_DESCRIPTION,
   },
   verbose: {
     alias: "v",
