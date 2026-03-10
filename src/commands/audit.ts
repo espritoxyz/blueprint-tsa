@@ -175,6 +175,8 @@ async function runOpcodeInfoCheck(
   opcodes: number[],
   verbose: boolean,
   legacyAnalysisArtifacts: boolean,
+  iterationLimit: number,
+  recursionLimit: number,
 ): Promise<OpcodeInfo[]> {
   // Calculate timeout per opcode
   let opcodeTimeout: number | null = null;
@@ -186,17 +188,23 @@ async function runOpcodeInfoCheck(
     );
   }
 
+  const commonArgs = {
+    timeout: opcodeTimeout,
+    verbose,
+    contract: contractName,
+    iterationLimit,
+    recursionLimit,
+    legacyAnalysisArtifacts,
+  };
+
   const results: OpcodeInfo[] = [];
   for (const opcode of opcodes) {
     const info = await runOpcodeAuthorizationCheckAnalysis(
       opcode,
-      contractName,
       contractPath,
       ui,
-      opcodeTimeout,
+      commonArgs,
       `Authorization check for ${formatOpcodeHex(opcode)} completed.`,
-      verbose,
-      legacyAnalysisArtifacts,
     );
 
     if (info !== null) {
@@ -501,6 +509,8 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     opcodes,
     verbose ?? false,
     parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
+    parsedArgs[ITERATION_LIMIT_OPTION],
+    parsedArgs[RECURSION_LIMIT_OPTION],
   );
 
   // Run drain-check
