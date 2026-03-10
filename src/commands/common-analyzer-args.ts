@@ -5,6 +5,10 @@ import {
   DEFAULT_RECURSION_LIMIT,
 } from "../common/constants.js";
 
+export const ITERATION_LIMIT_OPTION = "iteration-limit";
+export const RECURSION_LIMIT_OPTION = "recursion-limit";
+export const VERBOSE_ANALYSIS_ARTIFACTS_OPTION = "verbose-analysis-artifacts";
+
 export interface CommonAnalyzerArgs {
   timeout: number | null;
   verbose?: boolean;
@@ -12,6 +16,7 @@ export interface CommonAnalyzerArgs {
   iterationLimit: number;
   recursionLimit: number;
   interactive?: boolean;
+  legacyAnalysisArtifacts?: boolean;
 }
 
 export interface CommonAnalyzerRecvInternalArgs extends CommonAnalyzerArgs {
@@ -26,7 +31,7 @@ export function generateFlagsFromCommonArgs(
       ? ["--timeout", commonArgs.timeout.toString()]
       : []),
     ...(commonArgs.verbose ? ["-v"] : []),
-    ...["--iteration-limit", commonArgs.iterationLimit.toString()],
+    ...[`--${ITERATION_LIMIT_OPTION}`, commonArgs.iterationLimit.toString()],
     ...["--max-recursion-depth", commonArgs.recursionLimit.toString()],
   ];
 }
@@ -78,12 +83,12 @@ export const commonAnalyzerCliOptions = {
     description: "Contract name",
     demandOption: true,
   },
-  "iteration-limit": {
+  [ITERATION_LIMIT_OPTION]: {
     type: "number",
     description: "Iteration limit",
     default: DEFAULT_ITERATION_LIMIT,
   },
-  "recursion-limit": {
+  [RECURSION_LIMIT_OPTION]: {
     type: "number",
     description: "Recursion limit",
     default: DEFAULT_RECURSION_LIMIT,
@@ -92,6 +97,12 @@ export const commonAnalyzerCliOptions = {
     type: "boolean",
     default: true,
     description: "Enable interactive confirmations",
+  },
+  [VERBOSE_ANALYSIS_ARTIFACTS_OPTION]: {
+    type: "boolean",
+    default: false,
+    description:
+      "Keep TSA exported inputs in the verbose multi-file directory layout",
   },
 } as const satisfies Record<string, Options>;
 

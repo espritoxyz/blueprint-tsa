@@ -53,6 +53,7 @@ export async function extractOpcodes(
       checkerCell: new Cell(),
       properties,
       codePath: config.codePath,
+      expectsSarifReport: false,
     });
 
     const args = [

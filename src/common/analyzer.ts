@@ -44,7 +44,7 @@ export class Analyzer {
           resolve({ stdout, stderr });
         } else {
           console.error("\n" + stderr);
-          if (logPath) {
+          if (logPath && stdout.trim().length > 0) {
             writeFileSync(logPath, stdout);
             console.error(`TSA log available at: ${logPath}`);
           }

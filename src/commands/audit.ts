@@ -22,6 +22,7 @@ import { buildAllContracts } from "../common/build-utils.js";
 import {
   findCompiledContract,
   findTSAReportsDirectory,
+  getCompactTypedInputPath,
   getInputsPath,
 } from "../common/paths.js";
 import { generateReportId, formatOpcodeHex } from "../common/format-utils.js";
@@ -44,6 +45,9 @@ import {
 import {
   commonAnalyzerRecvInternalCliOptions,
   CommonAnalyzerRecvInternalArgs,
+  ITERATION_LIMIT_OPTION,
+  RECURSION_LIMIT_OPTION,
+  VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 import {
@@ -152,10 +156,9 @@ function buildCheckResult(
   if (vulnerability) {
     const vulnDesc = analyzer.getVulnerabilityFromReport();
     if (vulnDesc) {
-      result.vulnerabilityPath = getInputsPath(
-        analyzer.id,
-        vulnDesc.executionIndex,
-      );
+      result.vulnerabilityPath = analyzer.usesVerboseAnalysisArtifacts()
+        ? getInputsPath(analyzer.id, vulnDesc.executionIndex)
+        : getCompactTypedInputPath(analyzer.id);
       result.analyzerId = analyzer.id;
     }
     result.descriptionUrl = getCheckDescriptionUrl(checkName);
@@ -171,6 +174,7 @@ async function runOpcodeInfoCheck(
   timeout: number | null,
   opcodes: number[],
   verbose: boolean,
+  legacyAnalysisArtifacts: boolean,
 ): Promise<OpcodeInfo[]> {
   // Calculate timeout per opcode
   let opcodeTimeout: number | null = null;
@@ -192,6 +196,7 @@ async function runOpcodeInfoCheck(
       opcodeTimeout,
       `Authorization check for ${formatOpcodeHex(opcode)} completed.`,
       verbose,
+      legacyAnalysisArtifacts,
     );
 
     if (info !== null) {
@@ -233,6 +238,7 @@ async function runReplayAttackCheck(
   verbose: boolean,
   iterationLimit: number,
   recursionLimit: number,
+  legacyAnalysisArtifacts: boolean,
 ): Promise<CheckResult> {
   const analyzer = await runReplayAttackCheckAnalysis(
     ui,
@@ -243,6 +249,7 @@ async function runReplayAttackCheck(
       contract: contractName,
       iterationLimit,
       recursionLimit,
+      legacyAnalysisArtifacts,
     },
     null,
     `${REPLAY_ATTACK_CHECK_NAME} completed.`,
@@ -493,6 +500,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     effectiveTimeout,
     opcodes,
     verbose ?? false,
+    parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
   );
 
   // Run drain-check
@@ -503,9 +511,10 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     opcodes,
     verbose,
     contract: contractName,
-    iterationLimit: parsedArgs["iteration-limit"],
-    recursionLimit: parsedArgs["recursion-limit"],
+    iterationLimit: parsedArgs[ITERATION_LIMIT_OPTION],
+    recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
     interactive: parsedArgs.interactive,
+    legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
   };
 
   const drainResult = await runDrainCheck(
@@ -527,6 +536,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     verbose ?? false,
     commonArgs.iterationLimit,
     commonArgs.recursionLimit,
+    commonArgs.legacyAnalysisArtifacts ?? false,
   );
   summary.checks.push(replayResult);
 

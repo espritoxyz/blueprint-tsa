@@ -17,6 +17,7 @@ import {
   getCheckerPath,
   getReportDirectory,
   getInputsPath,
+  getCompactTypedInputPath,
 } from "../common/paths.js";
 import { existsSync } from "fs";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
@@ -24,7 +25,10 @@ import { beginCell } from "@ton/core";
 import { TreeProperty } from "../common/draw.js";
 import { formatOpcodeHex } from "../common/format-utils.js";
 import { findNonFailingExecution } from "../common/result-parsing.js";
-import { commonAnalyzerCliOptions } from "./common-analyzer-args.js";
+import {
+  commonAnalyzerCliOptions,
+  VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
+} from "./common-analyzer-args.js";
 
 export interface OpcodeInfo {
   opcode: number;
@@ -59,6 +63,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
   timeout: number | null,
   completionMessage: string = "Analysis complete.",
   verbose: boolean = false,
+  legacyAnalysisArtifacts: boolean = false,
 ): Promise<OpcodeInfo | null> {
   const properties: TreeProperty[] = [
     { key: "Contract", value: contractName },
@@ -88,6 +93,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
     checkerCell,
     properties,
     codePath: contractPath,
+    legacyAnalysisArtifacts,
   });
 
   const sarifPath = getSarifReportPath(analyzer.id);
@@ -115,8 +121,12 @@ export async function runOpcodeAuthorizationCheckAnalysis(
     completionMessage,
   );
 
-  const vulnerability = analyzer.vulnerabilityIsPresent();
-  const nonFailingExecutionIndex = findNonFailingExecution(sarifPath);
+  const vulnerability = existsSync(sarifPath)
+    ? analyzer.vulnerabilityIsPresent()
+    : false;
+  const nonFailingExecutionIndex = existsSync(sarifPath)
+    ? findNonFailingExecution(sarifPath)
+    : undefined;
 
   if (nonFailingExecutionIndex === undefined && !vulnerability) {
     return null;
@@ -127,7 +137,9 @@ export async function runOpcodeAuthorizationCheckAnalysis(
   if (vulnerability) {
     const vulnDesc = analyzer.getVulnerabilityFromReport();
     if (vulnDesc) {
-      vulnerabilityPath = getInputsPath(analyzer.id, vulnDesc.executionIndex);
+      vulnerabilityPath = legacyAnalysisArtifacts
+        ? getInputsPath(analyzer.id, vulnDesc.executionIndex)
+        : getCompactTypedInputPath(analyzer.id);
     }
   }
 
@@ -145,6 +157,7 @@ async function extractOpcodeInfo(
   ui: UIProvider,
   timeout: number | null,
   verbose: boolean,
+  legacyAnalysisArtifacts: boolean,
 ): Promise<OpcodeInfo | null> {
   return runOpcodeAuthorizationCheckAnalysis(
     opcode,
@@ -154,6 +167,7 @@ async function extractOpcodeInfo(
     timeout,
     "Analysis complete.",
     verbose,
+    legacyAnalysisArtifacts,
   );
 }
 
@@ -164,6 +178,7 @@ async function getAllOpcodeInfo(
   ui: UIProvider,
   timeout: number | null,
   verbose: boolean,
+  legacyAnalysisArtifacts: boolean,
 ): Promise<OpcodeInfo[]> {
   const results: OpcodeInfo[] = [];
   for (const opcode of opcodes) {
@@ -174,6 +189,7 @@ async function getAllOpcodeInfo(
       ui,
       timeout,
       verbose,
+      legacyAnalysisArtifacts,
     );
     if (info !== null) {
       results.push(info);
@@ -250,6 +266,7 @@ const opcodeInfoHandler = async (
     ui,
     (timeout as number) ?? null,
     verbose as boolean,
+    args[VERBOSE_ANALYSIS_ARTIFACTS_OPTION] as boolean,
   );
 
   ui.write("");

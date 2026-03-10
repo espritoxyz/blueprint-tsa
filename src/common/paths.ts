@@ -31,9 +31,13 @@ export const findTSAReportsDirectory = (): string => {
   return result;
 };
 
-export const getReportDirectory = (id: string): string => {
+export const getReportDirectoryPath = (id: string): string => {
   const reportsDir = findTSAReportsDirectory();
-  const result = path.join(reportsDir, `run-${id}`);
+  return path.join(reportsDir, `run-${id}`);
+};
+
+export const getReportDirectory = (id: string): string => {
+  const result = getReportDirectoryPath(id);
   if (!fs.existsSync(result)) {
     fs.mkdirSync(result, { recursive: true });
   }
@@ -96,23 +100,43 @@ export const getCheckerPath = (checkerName: string): string => {
 };
 
 export const getSarifReportPath = (id: string): string => {
-  const reportDir = getReportDirectory(id);
+  const reportDir = getReportDirectoryPath(id);
   return path.join(reportDir, "report.sarif");
 };
 
 export const getSummaryPath = (id: string): string => {
-  const reportDir = getReportDirectory(id);
+  const reportDir = getReportDirectoryPath(id);
   return path.join(reportDir, "summary.txt");
 };
 
 export const getInputsPath = (id: string, index: number): string => {
-  const reportDir = getReportDirectory(id);
+  const reportDir = getReportDirectoryPath(id);
   return path.join(reportDir, `execution_${index}`);
 };
 
 export const getReproduceConfigPath = (id: string): string => {
-  const reportDir = getReportDirectory(id);
+  const reportDir = getReportDirectoryPath(id);
   return path.join(reportDir, "tsa-reproduce-config.json");
+};
+
+const CONTRACT_DATA_BOC_FILE = "contract-data.boc";
+const MESSAGE_BODY_BOC_FILE = "message-body.boc";
+const TYPED_INPUT_FILE = "typed-input.yaml";
+
+export const getCompactInputsPath = (id: string): string => {
+  return getReportDirectoryPath(id);
+};
+
+export const getCompactContractDataBocPath = (id: string): string => {
+  return path.join(getCompactInputsPath(id), CONTRACT_DATA_BOC_FILE);
+};
+
+export const getCompactMsgBodyBocPath = (id: string): string => {
+  return path.join(getCompactInputsPath(id), MESSAGE_BODY_BOC_FILE);
+};
+
+export const getCompactTypedInputPath = (id: string): string => {
+  return path.join(getCompactInputsPath(id), TYPED_INPUT_FILE);
 };
 
 export const getContractDataBocPath = (id: string, index: number): string => {
@@ -136,7 +160,7 @@ export const getMsgBodyTypesPath = (id: string, index: number): string => {
 };
 
 export const getTsaRunLogPath = (id: string): string => {
-  const reportDir = getReportDirectory(id);
+  const reportDir = getReportDirectoryPath(id);
   return path.join(reportDir, "tsa.log");
 };
 

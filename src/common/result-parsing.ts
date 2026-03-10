@@ -4,14 +4,17 @@ import {
   EXPECTED_MESSAGE_NON_FAILING,
 } from "./constants.js";
 
+const getSarifResults = (sarifPath: string) => {
+  const sarifContent = readFileSync(sarifPath, "utf-8");
+  const parsedObject = JSON.parse(sarifContent);
+  return parsedObject.runs[0].results || [];
+};
+
 const findExecutionByMessage = (
   sarifPath: string,
   expectedMessage: string,
 ): number | undefined => {
-  const sarifContent = readFileSync(sarifPath, "utf-8");
-  const parsedObject = JSON.parse(sarifContent);
-
-  const results = parsedObject.runs[0].results || [];
+  const results = getSarifResults(sarifPath);
 
   const index = results.findIndex(
     // TODO add the proper parsing of SARIF
@@ -34,13 +37,15 @@ export const findNonFailingExecution = (
   return findExecutionByMessage(sarifPath, EXPECTED_MESSAGE_NON_FAILING);
 };
 
+export const isSarifResultsEmpty = (sarifPath: string): boolean => {
+  return getSarifResults(sarifPath).length === 0;
+};
+
 export const getMessageValue = (
   sarifPath: string,
   index: number,
 ): bigint | null => {
-  const sarifContent = readFileSync(sarifPath, "utf-8");
-  const parsedObject = JSON.parse(sarifContent);
-  const results = parsedObject.runs[0].results || [];
+  const results = getSarifResults(sarifPath);
   const result = results[index];
   const input = result.properties.additionalInputs["0"];
   if (input.type == "recvExternalInput") {
@@ -50,9 +55,7 @@ export const getMessageValue = (
 };
 
 export const getInitialBalance = (sarifPath: string, index: number): bigint => {
-  const sarifContent = readFileSync(sarifPath, "utf-8");
-  const parsedObject = JSON.parse(sarifContent);
-  const results = parsedObject.runs[0].results || [];
+  const results = getSarifResults(sarifPath);
   const result = results[index];
   return BigInt(result.properties.initialBalance["1"]);
 };

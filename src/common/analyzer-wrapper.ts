@@ -1,4 +1,13 @@
-import { existsSync, writeFileSync, unlinkSync, readFileSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "fs";
 import path from "path";
 import { tmpdir } from "os";
 import { UIProvider } from "@ton/blueprint";
@@ -12,6 +21,7 @@ import {
   findExploitExecutionIndex,
   getMessageValue,
   getInitialBalance,
+  isSarifResultsEmpty,
 } from "./result-parsing.js";
 import {
   getSummaryPath,
@@ -20,8 +30,13 @@ import {
   getContractDataBocPath,
   getTsaRunLogPath,
   getMsgBodyBocPath,
-  getContractDataTypesPath,
   getMsgBodyTypesPath,
+  getReportDirectory,
+  getReportDirectoryPath,
+  getCompactInputsPath,
+  getCompactContractDataBocPath,
+  getCompactMsgBodyBocPath,
+  getCompactTypedInputPath,
 } from "./paths.js";
 
 /**
@@ -33,6 +48,8 @@ export interface AnalyzerWrapperConfig {
   checkerCell: Cell;
   properties: TreeProperty[];
   codePath: string;
+  legacyAnalysisArtifacts?: boolean;
+  expectsSarifReport?: boolean;
 }
 
 export interface VulnerabilityDescription {
@@ -52,11 +69,22 @@ const ANALYZER_RUNNING_MESSAGE = "Running TSA analysis...";
 const ANALYZER_SUCCESS_LOG_PREFIX = "TSA run log saved to:";
 const ANALYZER_NON_EMPTY_LOG_MESSAGE =
   "TSA produced additional log output. Check the log file for details.";
+const MISSING_SARIF_ERROR_MESSAGE =
+  "TSA finished without producing a SARIF report.";
 const PROGRESS_BAR_WIDTH = 20;
 const PROGRESS_UPDATE_INTERVAL_MS = 1000;
 const PROGRESS_COMPLETION_DISPLAY_MS = 500;
 const MILLISECONDS_PER_SECOND = 1000;
 const FULL_PROGRESS_PERCENT = 100;
+const EXECUTION_DIRECTORY_PREFIX = "execution_";
+const CONTRACT_DATA_DIRECTORY = "c4_1";
+const EXTRA_CONTRACT_DATA_DIRECTORY = "c4_2";
+const MESSAGE_BODY_DIRECTORY = "msgBody_0";
+const CELL_BOC_FILE = "cell.boc";
+const CELL_TYPES_FILE = "cell-types.yaml";
+const MESSAGE_BODY_INPUT_KEY = "messageBody";
+const CONTRACT_DATA_INPUT_KEY = "contractData";
+const INDENT_SIZE = 2;
 
 export class AnalyzerWrapper {
   private config: AnalyzerWrapperConfig;
@@ -250,6 +278,152 @@ export class AnalyzerWrapper {
     });
   }
 
+  private indentYamlContent(content: string): string {
+    return content
+      .split("\n")
+      .map((line) => `${" ".repeat(INDENT_SIZE)}${line}`)
+      .join("\n");
+  }
+
+  private mergeYamlDocuments(
+    messageBodyPath: string,
+    contractDataPath: string,
+  ): string | null {
+    const messageBodyContent = existsSync(messageBodyPath)
+      ? readFileSync(messageBodyPath, "utf8").trim()
+      : "";
+    const contractDataContent = existsSync(contractDataPath)
+      ? readFileSync(contractDataPath, "utf8").trim()
+      : "";
+
+    const sections: string[] = [];
+    if (messageBodyContent.length > 0) {
+      sections.push(
+        `${MESSAGE_BODY_INPUT_KEY}:\n${this.indentYamlContent(messageBodyContent)}`,
+      );
+    }
+    if (contractDataContent.length > 0) {
+      sections.push(
+        `${CONTRACT_DATA_INPUT_KEY}:\n${this.indentYamlContent(contractDataContent)}`,
+      );
+    }
+
+    if (sections.length === 0) {
+      return null;
+    }
+
+    return `${sections.join("\n")}\n`;
+  }
+
+  private getResolvedInputsPath(executionIndex: number): string {
+    return this.config.legacyAnalysisArtifacts
+      ? getInputsPath(this.id, executionIndex)
+      : getCompactInputsPath(this.id);
+  }
+
+  private getResolvedContractDataBocPath(executionIndex: number): string {
+    return this.config.legacyAnalysisArtifacts
+      ? getContractDataBocPath(this.id, executionIndex)
+      : getCompactContractDataBocPath(this.id);
+  }
+
+  private getResolvedMsgBodyBocPath(executionIndex: number): string {
+    return this.config.legacyAnalysisArtifacts
+      ? getMsgBodyBocPath(this.id, executionIndex)
+      : getCompactMsgBodyBocPath(this.id);
+  }
+
+  private getResolvedTypedInputPath(executionIndex: number): string {
+    return this.config.legacyAnalysisArtifacts
+      ? getMsgBodyTypesPath(this.id, executionIndex)
+      : getCompactTypedInputPath(this.id);
+  }
+
+  private removeDirectoryIfEmpty(directoryPath: string): void {
+    if (!existsSync(directoryPath) || !statSync(directoryPath).isDirectory()) {
+      return;
+    }
+
+    if (readdirSync(directoryPath).length === 0) {
+      rmSync(directoryPath, { recursive: true, force: true });
+    }
+  }
+
+  private normalizeExportedInputs(): void {
+    if (this.config.legacyAnalysisArtifacts) {
+      return;
+    }
+
+    const reportDir = path.dirname(getSummaryPath(this.id));
+    const sarifPath = getSarifReportPath(this.id);
+    const exploitExecutionIndex = findExploitExecutionIndex(sarifPath);
+    const executionDirs = readdirSync(reportDir)
+      .filter((entry) => entry.startsWith(EXECUTION_DIRECTORY_PREFIX))
+      .map((entry) => path.join(reportDir, entry))
+      .filter((entryPath) => statSync(entryPath).isDirectory());
+
+    for (const executionDir of executionDirs) {
+      const executionIndex = Number.parseInt(
+        path.basename(executionDir).replace(EXECUTION_DIRECTORY_PREFIX, ""),
+        10,
+      );
+
+      if (
+        Number.isNaN(executionIndex) ||
+        executionIndex !== exploitExecutionIndex
+      ) {
+        rmSync(executionDir, { recursive: true, force: true });
+        continue;
+      }
+
+      const contractDataDir = path.join(executionDir, CONTRACT_DATA_DIRECTORY);
+      const extraContractDataDir = path.join(
+        executionDir,
+        EXTRA_CONTRACT_DATA_DIRECTORY,
+      );
+      const messageBodyDir = path.join(executionDir, MESSAGE_BODY_DIRECTORY);
+      const contractDataBocSource = path.join(contractDataDir, CELL_BOC_FILE);
+      const contractDataTypesSource = path.join(
+        contractDataDir,
+        CELL_TYPES_FILE,
+      );
+      const msgBodyBocSource = path.join(messageBodyDir, CELL_BOC_FILE);
+      const msgBodyTypesSource = path.join(messageBodyDir, CELL_TYPES_FILE);
+
+      mkdirSync(reportDir, { recursive: true });
+
+      if (existsSync(contractDataBocSource)) {
+        writeFileSync(
+          getCompactContractDataBocPath(this.id),
+          readFileSync(contractDataBocSource),
+        );
+      }
+
+      if (existsSync(msgBodyBocSource)) {
+        writeFileSync(
+          getCompactMsgBodyBocPath(this.id),
+          readFileSync(msgBodyBocSource),
+        );
+      }
+
+      const mergedTypedInput = this.mergeYamlDocuments(
+        msgBodyTypesSource,
+        contractDataTypesSource,
+      );
+      const typedInputPath = getCompactTypedInputPath(this.id);
+      if (mergedTypedInput !== null) {
+        writeFileSync(typedInputPath, mergedTypedInput);
+      } else if (existsSync(typedInputPath)) {
+        unlinkSync(typedInputPath);
+      }
+
+      rmSync(executionDir, { recursive: true, force: true });
+      if (existsSync(extraContractDataDir)) {
+        rmSync(extraContractDataDir, { recursive: true, force: true });
+      }
+    }
+  }
+
   /**
    * Runs the checker analysis with custom analyzer arguments
    * @param checkerFilename - Name of the checker file to compile
@@ -285,16 +459,36 @@ export class AnalyzerWrapper {
       );
       const result = await analyzer.run(analyzerArgs, logPath);
 
-      writeFileSync(logPath, result.stdout);
+      const hasLogOutput = result.stdout.trim().length > 0;
+      if (hasLogOutput) {
+        writeFileSync(logPath, result.stdout);
+      } else if (existsSync(logPath)) {
+        unlinkSync(logPath);
+      }
+
+      if (this.config.expectsSarifReport !== false) {
+        const sarifPath = getSarifReportPath(this.id);
+        if (!existsSync(sarifPath)) {
+          throw new Error(MISSING_SARIF_ERROR_MESSAGE);
+        }
+
+        if (
+          !this.usesVerboseAnalysisArtifacts() &&
+          isSarifResultsEmpty(sarifPath)
+        ) {
+          rmSync(getReportDirectory(this.id), { recursive: true, force: true });
+        } else {
+          this.normalizeExportedInputs();
+        }
+      }
 
       await this.showCompletedProgressBar(
         Number.isFinite(timeoutSeconds) ? timeoutSeconds : null,
       );
       this.config.ui.clearActionPrompt();
       this.config.ui.write(`${Sym.OK} ${completionMessage}`);
-      this.config.ui.write(`${ANALYZER_SUCCESS_LOG_PREFIX} ${logPath}`);
-
-      if (result.stdout.trim().length > 0) {
+      if (hasLogOutput) {
+        this.config.ui.write(`${ANALYZER_SUCCESS_LOG_PREFIX} ${logPath}`);
         this.config.ui.write(`${Sym.WARN} ${ANALYZER_NON_EMPTY_LOG_MESSAGE}`);
       }
     } finally {
@@ -304,18 +498,26 @@ export class AnalyzerWrapper {
     }
   }
 
+  usesVerboseAnalysisArtifacts(): boolean {
+    return this.config.legacyAnalysisArtifacts ?? false;
+  }
+
   getVulnerabilityFromReport(): VulnerabilityDescription | null {
     const sarifPath = getSarifReportPath(this.id);
+    if (!existsSync(sarifPath)) {
+      return null;
+    }
+
     const index = findExploitExecutionIndex(sarifPath);
     if (index === undefined) {
       return null;
     }
 
-    const dataPath = getContractDataBocPath(this.id, index);
+    const dataPath = this.getResolvedContractDataBocPath(index);
     const value = getMessageValue(sarifPath, index);
     const balance = getInitialBalance(sarifPath, index);
 
-    const msgBodyPath = getMsgBodyBocPath(this.id, index);
+    const msgBodyPath = this.getResolvedMsgBodyBocPath(index);
     const msgBodyBuffer = readFileSync(msgBodyPath);
     const msgBody = Cell.fromBoc(msgBodyBuffer)[0];
 
@@ -331,6 +533,10 @@ export class AnalyzerWrapper {
 
   vulnerabilityIsPresent(): boolean {
     const sarifPath = getSarifReportPath(this.id);
+    if (!existsSync(sarifPath)) {
+      return false;
+    }
+
     const index = findExploitExecutionIndex(sarifPath);
     return index !== undefined;
   }
@@ -339,25 +545,33 @@ export class AnalyzerWrapper {
     vulnerability: VulnerabilityDescription | null,
     descriptionUrl?: string,
   ) {
-    const summaryPath = getSummaryPath(this.id);
-    const sarifPath = getSarifReportPath(this.id);
+    const reportDirectoryPath = getReportDirectoryPath(this.id);
+    const sarifPath = path.join(reportDirectoryPath, "report.sarif");
 
     if (vulnerability == null) {
       const report = `${Sym.OK} Vulnerability not found.`;
-      writeFileSync(summaryPath, report);
 
       this.config.ui.write("");
       this.config.ui.write(report);
       this.config.ui.write("");
+
+      if (existsSync(reportDirectoryPath)) {
+        const summaryPath = path.join(reportDirectoryPath, "summary.txt");
+        writeFileSync(summaryPath, report);
+      }
       return;
     }
+
+    const summaryPath = getSummaryPath(this.id);
+
+    const typedInputLine = this.usesVerboseAnalysisArtifacts()
+      ? `Typed input: ${this.getResolvedTypedInputPath(vulnerability.executionIndex)}`
+      : `typed-input.yaml: ${this.getResolvedTypedInputPath(vulnerability.executionIndex)}`;
 
     const reportLines = [
       `${Sym.WARN} Vulnerability found!`,
       `Summary path: ${summaryPath}`,
-      `Input message body and contract data: ${getInputsPath(this.id, vulnerability.executionIndex)}`,
-      `Typed message body: ${getMsgBodyTypesPath(this.id, vulnerability.executionIndex)}`,
-      `Typed contract data: ${getContractDataTypesPath(this.id, vulnerability.executionIndex)}`,
+      typedInputLine,
       `SARIF with full information: ${sarifPath}`,
     ];
 

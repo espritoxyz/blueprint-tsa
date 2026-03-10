@@ -30,6 +30,9 @@ import {
   commonAnalyzerRecvInternalCliOptions,
   generateFlagsFromCommonRecvInternalArgs,
   generateOptionsForPropertyTree,
+  ITERATION_LIMIT_OPTION,
+  RECURSION_LIMIT_OPTION,
+  VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
 import {
   resolveBuiltContract,
@@ -108,6 +111,7 @@ export const runBounceCheckAnalysis = async (
       checkerCell,
       properties,
       codePath: contractPath,
+      legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
     });
 
     const reportDir = getReportDirectory(analyzer.id);
@@ -180,9 +184,10 @@ const bounceCheckCommand = async (
     opcodes,
     contract: contractName,
     verbose: parsedArgs.verbose,
-    iterationLimit: parsedArgs["iteration-limit"],
-    recursionLimit: parsedArgs["recursion-limit"],
+    iterationLimit: parsedArgs[ITERATION_LIMIT_OPTION],
+    recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
     interactive: parsedArgs.interactive,
+    legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
   });
   reportAndExit(ui, analyzer, BOUNCE_DESCRIPTION_URL);
 };
