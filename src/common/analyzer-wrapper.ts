@@ -476,7 +476,12 @@ export class AnalyzerWrapper {
           !this.usesVerboseAnalysisArtifacts() &&
           isSarifResultsEmpty(sarifPath)
         ) {
-          rmSync(getReportDirectory(this.id), { recursive: true, force: true });
+          if (!hasLogOutput) {
+            rmSync(getReportDirectory(this.id), {
+              recursive: true,
+              force: true,
+            });
+          }
         } else {
           this.normalizeExportedInputs();
         }
