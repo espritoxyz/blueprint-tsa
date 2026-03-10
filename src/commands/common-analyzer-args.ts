@@ -11,6 +11,7 @@ export interface CommonAnalyzerArgs {
   contract: string;
   iterationLimit: number;
   recursionLimit: number;
+  interactive?: boolean;
 }
 
 export interface CommonAnalyzerRecvInternalArgs extends CommonAnalyzerArgs {
@@ -86,6 +87,11 @@ export const commonAnalyzerCliOptions = {
     type: "number",
     description: "Recursion limit",
     default: DEFAULT_RECURSION_LIMIT,
+  },
+  interactive: {
+    type: "boolean",
+    default: true,
+    description: "Enable interactive confirmations",
   },
 } as const satisfies Record<string, Options>;
 
