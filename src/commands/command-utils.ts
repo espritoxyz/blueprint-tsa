@@ -52,8 +52,9 @@ export interface OpcodeExtractionPreflightOptions {
   interactive?: boolean;
 }
 
-export const hasExplicitTimeout = (timeout: number | null | undefined): boolean =>
-  timeout !== null && timeout !== undefined;
+export const hasExplicitTimeout = (
+  timeout: number | null | undefined,
+): boolean => timeout !== null && timeout !== undefined;
 
 export const isInteractiveEnabled = (interactive?: boolean): boolean =>
   interactive !== false;
@@ -196,7 +197,9 @@ export const confirmLongRunningAnalysis = async (
   }
 
   details.push("");
-  details.push("You will see progress updates while TSA prepares and runs the analysis.");
+  details.push(
+    "You will see progress updates while TSA prepares and runs the analysis.",
+  );
 
   ui.write("");
   for (const line of details) {

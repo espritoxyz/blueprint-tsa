@@ -48,10 +48,6 @@ export interface VulnerabilityDescription {
  * Generic wrapper for checker-based vulnerability analysis
  * Handles common logic for compiling, running, and cleaning up checker analysis
  */
-const ANALYZER_PREPARATION_MESSAGE =
-  "Preparing analyzer inputs and temporary files...";
-const ANALYZER_ARGUMENTS_READY_MESSAGE =
-  "Analyzer inputs are ready. Launching TSA...";
 const ANALYZER_RUNNING_MESSAGE = "Running TSA analysis...";
 const ANALYZER_SUCCESS_LOG_PREFIX = "TSA run log saved to:";
 const ANALYZER_NON_EMPTY_LOG_MESSAGE =
@@ -192,7 +188,10 @@ export class AnalyzerWrapper {
     return `[${progressBar}] ${percent}%`;
   }
 
-  private formatElapsedProgress(elapsedSeconds: number, timeoutSeconds: number): string {
+  private formatElapsedProgress(
+    elapsedSeconds: number,
+    timeoutSeconds: number,
+  ): string {
     const boundedElapsedSeconds = Math.max(0, elapsedSeconds);
     const boundedTimeoutSeconds = Math.max(1, timeoutSeconds);
     const progressRatio = boundedElapsedSeconds / boundedTimeoutSeconds;
@@ -233,7 +232,9 @@ export class AnalyzerWrapper {
     }
   }
 
-  private async showCompletedProgressBar(timeoutSeconds: number | null): Promise<void> {
+  private async showCompletedProgressBar(
+    timeoutSeconds: number | null,
+  ): Promise<void> {
     this.stopProgressBar();
 
     if (timeoutSeconds === null) {
@@ -262,7 +263,6 @@ export class AnalyzerWrapper {
     this.printAnalysisInfo();
     this.validateCheckerFile();
 
-    this.config.ui.write(`${Sym.WAIT} ${ANALYZER_PREPARATION_MESSAGE}`);
     if (checkerFilename != null) {
       await this.compileChecker(checkerFilename);
     }
@@ -270,12 +270,11 @@ export class AnalyzerWrapper {
 
     try {
       this.config.ui.clearActionPrompt();
-      this.config.ui.write(`${Sym.WAIT} ${ANALYZER_ARGUMENTS_READY_MESSAGE}`);
 
       const analyzerArgs = buildArgs(this);
       const timeoutIndex = analyzerArgs.indexOf("--timeout");
       const timeoutValue =
-        timeoutIndex >= 0 ? analyzerArgs[timeoutIndex + 1] ?? null : null;
+        timeoutIndex >= 0 ? (analyzerArgs[timeoutIndex + 1] ?? null) : null;
       const timeoutSeconds =
         timeoutValue !== null ? Number.parseInt(timeoutValue, 10) : null;
       const analyzer = await Analyzer.create();

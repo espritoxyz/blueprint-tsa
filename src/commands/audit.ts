@@ -544,9 +544,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
   // Run owner-hijack-check if owner method is provided
   if (ownerMethod) {
     ui.write("");
-    ui.write(
-      `${Sym.WAIT} Step 5/${checkCount}: running owner hijack check...`,
-    );
+    ui.write(`${Sym.WAIT} Step 5/${checkCount}: running owner hijack check...`);
     const ownerResult = await runOwnerHijackCheck(
       contractName,
       contractPath,
