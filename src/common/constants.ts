@@ -5,7 +5,7 @@ export class Sym {
   public static WAIT = "⏳";
 }
 
-export const TSA_VERSION = "v0.5.0";
+export const TSA_VERSION = "v0.5.1";
 export const TSA_NAME = `tsa-cli-${TSA_VERSION}.jar`;
 export const TSA_URL = `https://github.com/espritoxyz/tsa/releases/download/${TSA_VERSION}/tsa-cli.jar`;
 
