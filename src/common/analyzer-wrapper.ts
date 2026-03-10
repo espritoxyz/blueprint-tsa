@@ -569,9 +569,7 @@ export class AnalyzerWrapper {
 
     const summaryPath = getSummaryPath(this.id);
 
-    const typedInputLine = this.usesVerboseAnalysisArtifacts()
-      ? `Typed input: ${this.getResolvedTypedInputPath(vulnerability.executionIndex)}`
-      : `typed-input.yaml: ${this.getResolvedTypedInputPath(vulnerability.executionIndex)}`;
+    const typedInputLine = `Typed input: ${this.getResolvedTypedInputPath(vulnerability.executionIndex)}`;
 
     const reportLines = [
       `${Sym.WARN} Vulnerability found!`,
