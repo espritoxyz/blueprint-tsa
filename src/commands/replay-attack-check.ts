@@ -22,6 +22,9 @@ import {
   CommonAnalyzerArgs,
   generateFlagsFromCommonArgs,
   generateOptionsForPropertyTree,
+  ITERATION_LIMIT_OPTION,
+  RECURSION_LIMIT_OPTION,
+  VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
 import {
   resolveBuiltContract,
@@ -118,6 +121,7 @@ export const runReplayAttackCheckAnalysis = async (
     checkerCell,
     properties,
     codePath: contractPath,
+    legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
   });
 
   const reportDir = getReportDirectory(analyzer.id);
@@ -198,9 +202,10 @@ const replayAttackCheckCommand = async (
       timeout,
       verbose: parsedArgs.verbose,
       contract: contractName,
-      iterationLimit: parsedArgs["iteration-limit"],
-      recursionLimit: parsedArgs["recursion-limit"],
+      iterationLimit: parsedArgs[ITERATION_LIMIT_OPTION],
+      recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
       interactive: parsedArgs.interactive,
+      legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
     },
     seqnoData,
   );

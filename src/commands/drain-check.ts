@@ -27,6 +27,9 @@ import {
   commonAnalyzerRecvInternalCliOptions,
   generateFlagsFromCommonRecvInternalArgs,
   generateOptionsForPropertyTree,
+  ITERATION_LIMIT_OPTION,
+  RECURSION_LIMIT_OPTION,
+  VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
 import {
   resolveBuiltContract,
@@ -88,6 +91,7 @@ export const runDrainCheckAnalysis = async (
     checkerCell: beginCell().endCell(),
     properties,
     codePath: contractPath,
+    legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
   });
   const reportDir = getReportDirectory(analyzer.id);
   const sarifPath = getSarifReportPath(analyzer.id);
@@ -169,8 +173,9 @@ const drainCheckCommand = async (
     opcodes,
     verbose: parsedArgs.verbose,
     contract: contractName,
-    iterationLimit: parsedArgs["iteration-limit"],
-    recursionLimit: parsedArgs["recursion-limit"],
+    iterationLimit: parsedArgs[ITERATION_LIMIT_OPTION],
+    recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
+    legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
   };
 
   const analyzer = await runDrainCheckAnalysis(ui, contractPath, commonArgs);
