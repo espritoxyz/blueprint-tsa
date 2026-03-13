@@ -177,6 +177,7 @@ async function runOpcodeInfoCheck(
   legacyAnalysisArtifacts: boolean,
   iterationLimit: number,
   recursionLimit: number,
+  interactive: boolean,
 ): Promise<OpcodeInfo[]> {
   // Calculate timeout per opcode
   let opcodeTimeout: number | null = null;
@@ -194,6 +195,7 @@ async function runOpcodeInfoCheck(
     contract: contractName,
     iterationLimit,
     recursionLimit,
+    interactive,
     legacyAnalysisArtifacts,
   };
 
@@ -247,6 +249,7 @@ async function runReplayAttackCheck(
   iterationLimit: number,
   recursionLimit: number,
   legacyAnalysisArtifacts: boolean,
+  interactive: boolean,
 ): Promise<CheckResult> {
   const analyzer = await runReplayAttackCheckAnalysis(
     ui,
@@ -257,6 +260,7 @@ async function runReplayAttackCheck(
       contract: contractName,
       iterationLimit,
       recursionLimit,
+      interactive,
       legacyAnalysisArtifacts,
     },
     null,
@@ -425,7 +429,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
   const disableOpcodeExtraction = parsedArgs["disable-opcode-extraction"];
   const verbose = parsedArgs.verbose;
 
-  await buildAllContracts(ui);
+  await buildAllContracts(ui, parsedArgs.interactive);
   const contractPath = findCompiledContract(contractName);
 
   if (!existsSync(contractPath)) {
@@ -462,6 +466,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
       ui,
       codePath: contractPath,
       contractName,
+      interactive: parsedArgs.interactive,
     });
   }
 
@@ -511,6 +516,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
     parsedArgs[ITERATION_LIMIT_OPTION],
     parsedArgs[RECURSION_LIMIT_OPTION],
+    parsedArgs.interactive,
   );
 
   // Run drain-check
@@ -547,6 +553,7 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     commonArgs.iterationLimit,
     commonArgs.recursionLimit,
     commonArgs.legacyAnalysisArtifacts ?? false,
+    parsedArgs.interactive,
   );
   summary.checks.push(replayResult);
 

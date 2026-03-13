@@ -22,6 +22,7 @@ import {
   getMessageValue,
   getInitialBalance,
   isSarifResultsEmpty,
+  isSingleNonFailingResult,
 } from "./result-parsing.js";
 import {
   getSummaryPath,
@@ -31,7 +32,6 @@ import {
   getTsaRunLogPath,
   getMsgBodyBocPath,
   getMsgBodyTypesPath,
-  getReportDirectory,
   getReportDirectoryPath,
   getCompactInputsPath,
   getCompactContractDataBocPath,
@@ -48,6 +48,7 @@ export interface AnalyzerWrapperConfig {
   checkerCell: Cell;
   properties: TreeProperty[];
   codePath: string;
+  interactive: boolean;
   legacyAnalysisArtifacts?: boolean;
   expectsSarifReport?: boolean;
 }
@@ -61,10 +62,6 @@ export interface VulnerabilityDescription {
   msgBody: Cell;
 }
 
-/**
- * Generic wrapper for checker-based vulnerability analysis
- * Handles common logic for compiling, running, and cleaning up checker analysis
- */
 const ANALYZER_RUNNING_MESSAGE = "Running TSA analysis...";
 const ANALYZER_SUCCESS_LOG_PREFIX = "TSA run log saved to:";
 const ANALYZER_NON_EMPTY_LOG_MESSAGE =
@@ -92,6 +89,14 @@ export class AnalyzerWrapper {
   private tempCheckerCellPath: string | null = null;
   private progressTimer: ReturnType<typeof setInterval> | null = null;
   id: string;
+
+  private isInteractiveEnabled(): boolean {
+    return (
+      this.config.interactive !== false &&
+      process.stdin.isTTY === true &&
+      process.stdout.isTTY === true
+    );
+  }
 
   constructor(config: AnalyzerWrapperConfig) {
     this.config = config;
@@ -138,7 +143,9 @@ export class AnalyzerWrapper {
       return;
     }
 
-    this.config.ui.setActionPrompt(`${Sym.WAIT} Compiling checker...`);
+    if (this.isInteractiveEnabled()) {
+      this.config.ui.setActionPrompt(`${Sym.WAIT} Compiling checker...`);
+    }
 
     try {
       const bocCode = await compileFuncFileToBase64Boc(
@@ -149,7 +156,9 @@ export class AnalyzerWrapper {
       this.tempBocPath = path.join(tmpdir(), `checker-${Date.now()}.boc`);
       writeFileSync(this.tempBocPath, bocBuffer);
     } catch (error) {
-      this.config.ui.clearActionPrompt();
+      if (this.isInteractiveEnabled()) {
+        this.config.ui.clearActionPrompt();
+      }
       this.config.ui.write(
         `\n${Sym.ERR} Compilation failed: ${(error as Error).message}`,
       );
@@ -230,6 +239,10 @@ export class AnalyzerWrapper {
   private startProgressBar(timeoutSeconds: number | null): void {
     this.stopProgressBar();
 
+    if (!this.isInteractiveEnabled()) {
+      return;
+    }
+
     if (timeoutSeconds === null) {
       this.config.ui.setActionPrompt(`${Sym.WAIT} ${ANALYZER_RUNNING_MESSAGE}`);
       return;
@@ -265,7 +278,7 @@ export class AnalyzerWrapper {
   ): Promise<void> {
     this.stopProgressBar();
 
-    if (timeoutSeconds === null) {
+    if (!this.isInteractiveEnabled() || timeoutSeconds === null) {
       return;
     }
 
@@ -357,6 +370,8 @@ export class AnalyzerWrapper {
     const reportDir = path.dirname(getSummaryPath(this.id));
     const sarifPath = getSarifReportPath(this.id);
     const exploitExecutionIndex = findExploitExecutionIndex(sarifPath);
+    const shouldRemoveSarifReport =
+      isSarifResultsEmpty(sarifPath) || isSingleNonFailingResult(sarifPath);
     const executionDirs = readdirSync(reportDir)
       .filter((entry) => entry.startsWith(EXECUTION_DIRECTORY_PREFIX))
       .map((entry) => path.join(reportDir, entry))
@@ -422,6 +437,12 @@ export class AnalyzerWrapper {
         rmSync(extraContractDataDir, { recursive: true, force: true });
       }
     }
+
+    if (shouldRemoveSarifReport && existsSync(sarifPath)) {
+      unlinkSync(sarifPath);
+    }
+
+    this.removeDirectoryIfEmpty(reportDir);
   }
 
   /**
@@ -472,17 +493,7 @@ export class AnalyzerWrapper {
           throw new Error(MISSING_SARIF_ERROR_MESSAGE);
         }
 
-        if (
-          !this.usesVerboseAnalysisArtifacts() &&
-          isSarifResultsEmpty(sarifPath)
-        ) {
-          if (!hasLogOutput) {
-            rmSync(getReportDirectory(this.id), {
-              recursive: true,
-              force: true,
-            });
-          }
-        } else {
+        if (!this.usesVerboseAnalysisArtifacts()) {
           this.normalizeExportedInputs();
         }
       }
@@ -568,14 +579,20 @@ export class AnalyzerWrapper {
     }
 
     const summaryPath = getSummaryPath(this.id);
+    const relativeSummaryPath = path.relative(process.cwd(), summaryPath);
+    const relativeTypedInputPath = path.relative(
+      process.cwd(),
+      this.getResolvedTypedInputPath(vulnerability.executionIndex),
+    );
+    const relativeSarifPath = path.relative(process.cwd(), sarifPath);
 
-    const typedInputLine = `Typed input: ${this.getResolvedTypedInputPath(vulnerability.executionIndex)}`;
+    const typedInputLine = `Typed input: ${relativeTypedInputPath}`;
 
     const reportLines = [
       `${Sym.WARN} Vulnerability found!`,
-      `Summary path: ${summaryPath}`,
+      `Summary path: ${relativeSummaryPath}`,
       typedInputLine,
-      `SARIF with full information: ${sarifPath}`,
+      `SARIF with full information: ${relativeSarifPath}`,
     ];
 
     if (descriptionUrl) {

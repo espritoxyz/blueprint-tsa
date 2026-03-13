@@ -111,6 +111,7 @@ export const runBounceCheckAnalysis = async (
       checkerCell,
       properties,
       codePath: contractPath,
+      interactive: commonArgs.interactive ?? true,
       legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
     });
 
@@ -153,7 +154,7 @@ const bounceCheckCommand = async (
 ) => {
   const contractName = parsedArgs.contract;
 
-  await buildAllContracts(ui);
+  await buildAllContracts(ui, parsedArgs.interactive);
   const contractPath = resolveBuiltContract(ui, contractName);
 
   const { opcodes, timeout } = await resolveOpcodesAndTimeout(

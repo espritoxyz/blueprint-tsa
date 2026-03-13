@@ -37,6 +37,15 @@ export const findNonFailingExecution = (
   return findExecutionByMessage(sarifPath, EXPECTED_MESSAGE_NON_FAILING);
 };
 
+export const isSingleNonFailingResult = (sarifPath: string): boolean => {
+  const results = getSarifResults(sarifPath);
+
+  return (
+    results.length === 1 &&
+    results[0]?.message?.text === EXPECTED_MESSAGE_NON_FAILING
+  );
+};
+
 export const isSarifResultsEmpty = (sarifPath: string): boolean => {
   return getSarifResults(sarifPath).length === 0;
 };

@@ -4,8 +4,19 @@ import path from "path";
 import { compileFunc } from "@ton-community/func-js";
 import { Sym } from "./constants.js";
 
-export const buildAllContracts = async (ui: UIProvider) => {
-  ui.setActionPrompt(`${Sym.WAIT} Compiling contracts...`);
+export const buildAllContracts = async (
+  ui: UIProvider,
+  interactive: boolean,
+) => {
+  const isInteractiveTerminal =
+    interactive &&
+    process.stdin.isTTY === true &&
+    process.stdout.isTTY === true;
+
+  if (isInteractiveTerminal) {
+    ui.setActionPrompt(`${Sym.WAIT} Compiling contracts...`);
+  }
+
   try {
     await buildAll(ui);
   } catch (e) {
@@ -17,6 +28,7 @@ export const buildAllContracts = async (ui: UIProvider) => {
     );
     process.exit(1);
   }
+
   ui.clearActionPrompt();
   ui.write(`${Sym.OK} Compiled.\n`);
 };

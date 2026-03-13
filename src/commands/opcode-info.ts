@@ -107,6 +107,7 @@ export async function runOpcodeAuthorizationCheckAnalysis(
     checkerCell,
     properties,
     codePath: contractPath,
+    interactive: commonArgs.interactive ?? true,
     legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
   });
 
@@ -235,7 +236,7 @@ const opcodeInfoHandler = async (
   const { ui } = context;
   const { timeout, contract, verbose } = args;
 
-  await buildAllContracts(ui);
+  await buildAllContracts(ui, args.interactive as boolean);
   const codePath = findCompiledContract(contract as string);
 
   if (!existsSync(codePath)) {
@@ -253,6 +254,7 @@ const opcodeInfoHandler = async (
     ui,
     codePath,
     contractName: contract as string,
+    interactive: args.interactive as boolean,
   });
 
   if (opcodes.length === 0) {

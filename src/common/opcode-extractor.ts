@@ -15,6 +15,7 @@ export interface OpcodeExtractorConfig {
   ui: UIProvider;
   codePath: string;
   contractName: string;
+  interactive?: boolean;
 }
 
 export async function extractOpcodes(
@@ -53,6 +54,7 @@ export async function extractOpcodes(
       checkerCell: new Cell(),
       properties,
       codePath: config.codePath,
+      interactive: config.interactive ?? true,
       expectsSarifReport: false,
     });
 

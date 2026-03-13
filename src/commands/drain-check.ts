@@ -91,6 +91,7 @@ export const runDrainCheckAnalysis = async (
     checkerCell: beginCell().endCell(),
     properties,
     codePath: contractPath,
+    interactive: commonArgs.interactive ?? true,
     legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
   });
   const reportDir = getReportDirectory(analyzer.id);
@@ -142,7 +143,7 @@ const drainCheckCommand = async (
 ) => {
   const contractName = parsedArgs.contract;
 
-  await buildAllContracts(ui);
+  await buildAllContracts(ui, parsedArgs.interactive);
   const contractPath = resolveBuiltContract(ui, contractName);
 
   const { opcodes, timeout } = await resolveOpcodesAndTimeout(
@@ -228,6 +229,7 @@ export const drainCheckConcrete = async (
     checkerCell,
     properties,
     codePath: config.codePath,
+    interactive: true,
   });
 
   await analyzer.run(
