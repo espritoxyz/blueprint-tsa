@@ -57,7 +57,9 @@ export const hasExplicitTimeout = (
 ): boolean => timeout !== null && timeout !== undefined;
 
 export const isInteractiveEnabled = (interactive?: boolean): boolean =>
-  interactive !== false;
+  interactive !== false &&
+  process.stdin.isTTY === true &&
+  process.stdout.isTTY === true;
 
 export const confirmOpcodeExtractionWait = async (
   ui: UIProvider,
@@ -140,6 +142,7 @@ export const resolveOpcodesAndTimeout = async (
       ui,
       codePath: contractPath,
       contractName,
+      interactive: opts.interactive,
     });
   }
 

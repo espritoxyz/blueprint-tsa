@@ -121,6 +121,7 @@ export const runReplayAttackCheckAnalysis = async (
     checkerCell,
     properties,
     codePath: contractPath,
+    interactive: commonArgs.interactive ?? true,
     legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
   });
 
@@ -176,7 +177,7 @@ const replayAttackCheckCommand = async (
 ) => {
   const contractName = parsedArgs.contract;
 
-  await buildAllContracts(ui);
+  await buildAllContracts(ui, parsedArgs.interactive);
   const contractPath = resolveBuiltContract(ui, contractName);
 
   const timeout = parsedArgs.timeout ?? null;

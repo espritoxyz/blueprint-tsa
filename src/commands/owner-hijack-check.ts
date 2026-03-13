@@ -107,6 +107,7 @@ export const runOwnerHijackCheckAnalysis = async (
     checkerCell,
     properties,
     codePath: contractPath,
+    interactive: commonArgs.interactive ?? true,
     legacyAnalysisArtifacts: commonArgs.legacyAnalysisArtifacts,
   });
   const reportDir = getReportDirectory(analyzer.id);
@@ -161,7 +162,7 @@ const ownerHijackCheckCommand = async (
   const contractName = parsedArgs.contract;
   const methodId = BigInt(getMethodId(parsedArgs["method-name"]));
 
-  await buildAllContracts(ui);
+  await buildAllContracts(ui, parsedArgs.interactive);
   const contractPath = resolveBuiltContract(ui, contractName);
 
   const { opcodes, timeout } = await resolveOpcodesAndTimeout(
@@ -265,6 +266,7 @@ export const ownerHijackCheckConcrete = async (
     checkerCell,
     properties,
     codePath: config.codePath,
+    interactive: true,
   });
 
   await analyzer.run(
