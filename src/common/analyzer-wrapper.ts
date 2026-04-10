@@ -32,6 +32,7 @@ import {
   getTsaRunLogPath,
   getMsgBodyBocPath,
   getMsgBodyTypesPath,
+  getReportDirectory,
   getReportDirectoryPath,
   getCompactInputsPath,
   getCompactContractDataBocPath,
@@ -473,6 +474,7 @@ export class AnalyzerWrapper {
       const timeoutSeconds =
         timeoutValue !== null ? Number.parseInt(timeoutValue, 10) : null;
       const analyzer = await Analyzer.create();
+      getReportDirectory(this.id); // report directory should be created here
       const logPath = getTsaRunLogPath(this.id);
 
       this.startProgressBar(
