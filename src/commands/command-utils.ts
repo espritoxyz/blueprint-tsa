@@ -1,7 +1,14 @@
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
+import path from "path";
 import { UIProvider } from "@ton/blueprint";
-import { Sym } from "../common/constants.js";
-import { findCompiledContract } from "../common/paths.js";
+import { FETCH_CONTRACT_ID, Sym } from "../common/constants.js";
+import {
+  findCompiledContract,
+  getRemoteContractDataPath,
+  getRemoteContractMetaPath,
+  getRemoteContractPath,
+} from "../common/paths.js";
+import { buildAllContracts } from "../common/build-utils.js";
 import { extractOpcodes } from "../common/opcode-extractor.js";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 import {
@@ -27,7 +34,7 @@ const AUTO_TIMEOUT_MESSAGE =
 const CONFIRMATION_DECLINED_MESSAGE =
   "Analysis was cancelled by the user before it started.";
 const TIMEOUT_NOT_SET_LABEL = "not set";
-const OPCODE_EXTRACTION_DURATION_LABEL = "up to 20 seconds";
+const OPCODE_EXTRACTION_DURATION_LABEL = "up to 40 seconds";
 
 export const resolveBuiltContract = (
   ui: UIProvider,
@@ -36,9 +43,138 @@ export const resolveBuiltContract = (
   const contractPath = findCompiledContract(contractName);
   if (!existsSync(contractPath)) {
     ui.write(`\n${Sym.ERR} Contract ${contractName} not found`);
+    ui.write(
+      `Expected a compiled project contract at ${path.relative(process.cwd(), contractPath)} ` +
+        `or a fetched contract at ${path.relative(process.cwd(), getRemoteContractPath(contractName))}.`,
+    );
+    ui.write(
+      `To analyze a deployed contract, fetch it first: yarn blueprint tsa ${FETCH_CONTRACT_ID}`,
+    );
     process.exit(1);
   }
   return contractPath;
+};
+
+const describeRemoteContract = (contractName: string): string | null => {
+  const metaPath = getRemoteContractMetaPath(contractName);
+  if (!existsSync(metaPath)) {
+    return null;
+  }
+  try {
+    const meta = JSON.parse(readFileSync(metaPath, "utf-8"));
+    const parts: string[] = [];
+    if (typeof meta.address === "string") {
+      parts.push(`address ${meta.address}`);
+    }
+    if (typeof meta.network === "string") {
+      parts.push(meta.network);
+    }
+    if (typeof meta.timestamp === "number") {
+      parts.push(`state at ${new Date(meta.timestamp * 1000).toISOString()}`);
+    }
+    if (typeof meta.balance === "string") {
+      parts.push(`balance ${meta.balance} nanotons`);
+    }
+    return parts.length > 0 ? parts.join(", ") : null;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    return null;
+  }
+};
+
+export interface PreparedContract {
+  /** Path to the contract code (compiled artifact or fetched BoC) */
+  codePath: string;
+  /** Path to a .boc file with concrete contract data, or null for symbolic data */
+  dataPath: string | null;
+}
+
+/**
+ * Validates the --data CLI option.
+ * Returns null when the option is not set (symbolic data).
+ * Exits with an error message when the file does not exist.
+ */
+export const parseDataArg = (
+  ui: UIProvider,
+  rawData: string | undefined,
+): string | null => {
+  if (rawData === undefined) {
+    return null;
+  }
+  if (!existsSync(rawData)) {
+    ui.write(`\n${Sym.ERR} Contract data file not found at ${rawData}`);
+    process.exit(1);
+  }
+  return rawData;
+};
+
+const resolveRemoteContractData = async (
+  ui: UIProvider,
+  contractName: string,
+  explicitDataPath: string | null,
+  interactive: boolean,
+): Promise<string | null> => {
+  if (explicitDataPath !== null) {
+    return explicitDataPath;
+  }
+
+  const fetchedDataPath = getRemoteContractDataPath(contractName);
+  if (!existsSync(fetchedDataPath)) {
+    return null;
+  }
+
+  const relativeDataPath = path.relative(process.cwd(), fetchedDataPath);
+  if (!isInteractiveEnabled(interactive)) {
+    ui.write(
+      `Fetched contract data found at ${relativeDataPath}, but the analysis uses symbolic data by default. ` +
+        `Pass --data ${relativeDataPath} to analyze with the concrete data.`,
+    );
+    return null;
+  }
+
+  const useConcreteData = await ui.prompt(
+    `Concrete contract data was fetched along with this contract (${relativeDataPath}). Use it instead of symbolic data?`,
+  );
+  return useConcreteData ? fetchedDataPath : null;
+};
+
+/**
+ * Resolves a contract name to paths with contract code and data.
+ *
+ * Contracts fetched from the blockchain (stored in tsa/boc) take precedence;
+ * otherwise all project contracts are built and the compiled artifact is used.
+ *
+ * For fetched contracts with stored concrete data, in interactive mode the
+ * user is asked whether to analyze with the concrete or symbolic data
+ * (unless --data was given explicitly).
+ */
+export const prepareContract = async (
+  ui: UIProvider,
+  contractName: string,
+  interactive: boolean,
+  explicitDataPath: string | null = null,
+): Promise<PreparedContract> => {
+  const remotePath = getRemoteContractPath(contractName);
+  if (existsSync(remotePath)) {
+    const details = describeRemoteContract(contractName);
+    ui.write(
+      `${Sym.OK} Using contract fetched from the blockchain: ${path.relative(process.cwd(), remotePath)}` +
+        (details !== null ? ` (${details})` : ""),
+    );
+    const dataPath = await resolveRemoteContractData(
+      ui,
+      contractName,
+      explicitDataPath,
+      interactive,
+    );
+    return { codePath: remotePath, dataPath };
+  }
+
+  await buildAllContracts(ui, interactive);
+  return {
+    codePath: resolveBuiltContract(ui, contractName),
+    dataPath: explicitDataPath,
+  };
 };
 
 interface OpcodesAndTimeout {
@@ -55,6 +191,34 @@ export interface OpcodeExtractionPreflightOptions {
 export const hasExplicitTimeout = (
   timeout: number | null | undefined,
 ): boolean => timeout !== null && timeout !== undefined;
+
+/**
+ * Parses the --balance CLI option into nanotons.
+ * Returns null when the option is not set (symbolic balance).
+ * Exits with an error message on invalid input.
+ */
+export const parseBalanceArg = (
+  ui: UIProvider,
+  rawBalance: string | undefined,
+): bigint | null => {
+  if (rawBalance === undefined) {
+    return null;
+  }
+  let balance: bigint;
+  try {
+    balance = BigInt(rawBalance);
+  } catch {
+    ui.write(
+      `\n${Sym.ERR} Invalid balance '${rawBalance}': expected an integer number of nanotons`,
+    );
+    process.exit(1);
+  }
+  if (balance < 0n) {
+    ui.write(`\n${Sym.ERR} Balance must not be negative, got ${balance}`);
+    process.exit(1);
+  }
+  return balance;
+};
 
 export const isInteractiveEnabled = (interactive?: boolean): boolean =>
   interactive !== false &&

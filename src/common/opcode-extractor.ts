@@ -9,7 +9,7 @@ import { TreeProperty } from "./draw.js";
 import { formatOpcodeHex } from "./format-utils.js";
 import { doWithTemporaryFile } from "./file-utils.js";
 
-const OPCODE_EXTRACTION_TIMEOUT_SECONDS = 20;
+const OPCODE_EXTRACTION_TIMEOUT_SECONDS = 40;
 
 export interface OpcodeExtractorConfig {
   ui: UIProvider;

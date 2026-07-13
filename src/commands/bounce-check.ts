@@ -14,10 +14,7 @@ import {
   THROWER_FILENAME,
   BOUNCE_DESCRIPTION_URL,
 } from "../common/constants.js";
-import {
-  buildAllContracts,
-  compileFuncFileToBase64Boc,
-} from "../common/build-utils.js";
+import { compileFuncFileToBase64Boc } from "../common/build-utils.js";
 import { doWithTemporaryFile } from "../common/file-utils.js";
 import {
   getCheckerPath,
@@ -26,6 +23,8 @@ import {
   getThrowerPath,
 } from "../common/paths.js";
 import {
+  BALANCE_OPTION,
+  DATA_OPTION,
   CommonAnalyzerRecvInternalArgs,
   commonAnalyzerRecvInternalCliOptions,
   generateFlagsFromCommonRecvInternalArgs,
@@ -35,11 +34,13 @@ import {
   VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
 import {
-  resolveBuiltContract,
+  prepareContract,
   resolveOpcodesAndTimeout,
   reportAndExit,
   confirmLongRunningAnalysis,
   hasExplicitTimeout,
+  parseBalanceArg,
+  parseDataArg,
 } from "./command-utils.js";
 import { tmpdir } from "os";
 import path from "path";
@@ -136,7 +137,8 @@ export const runBounceCheckAnalysis = async (
         sarifPath,
         "--exported-inputs",
         reportDir,
-        ...generateFlagsFromCommonRecvInternalArgs(commonArgs),
+        // Two analyzed contracts: the contract under test and the thrower
+        ...generateFlagsFromCommonRecvInternalArgs(commonArgs, 2),
         "--scheme",
         schemePath,
         "--continue-on-contract-exception",
@@ -154,8 +156,12 @@ const bounceCheckCommand = async (
 ) => {
   const contractName = parsedArgs.contract;
 
-  await buildAllContracts(ui, parsedArgs.interactive);
-  const contractPath = resolveBuiltContract(ui, contractName);
+  const { codePath: contractPath, dataPath } = await prepareContract(
+    ui,
+    contractName,
+    parsedArgs.interactive,
+    parseDataArg(ui, parsedArgs[DATA_OPTION]),
+  );
 
   const { opcodes, timeout } = await resolveOpcodesAndTimeout(
     ui,
@@ -189,6 +195,8 @@ const bounceCheckCommand = async (
     recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
     interactive: parsedArgs.interactive,
     legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
+    balance: parseBalanceArg(ui, parsedArgs[BALANCE_OPTION]),
+    data: dataPath,
   });
   reportAndExit(ui, analyzer, BOUNCE_DESCRIPTION_URL);
 };

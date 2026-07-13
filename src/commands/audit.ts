@@ -1,5 +1,5 @@
 import { CommandModule, InferredOptionTypes, Options } from "yargs";
-import { existsSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
 import path from "path";
 import { CommandContext } from "../cli.js";
 import {
@@ -18,9 +18,7 @@ import {
   OWNER_HIJACK_DESCRIPTION_URL,
   BOUNCE_DESCRIPTION_URL,
 } from "../common/constants.js";
-import { buildAllContracts } from "../common/build-utils.js";
 import {
-  findCompiledContract,
   findTSAReportsDirectory,
   getCompactTypedInputPath,
   getInputsPath,
@@ -43,6 +41,8 @@ import {
   OpcodeInfo,
 } from "./opcode-info.js";
 import {
+  BALANCE_OPTION,
+  DATA_OPTION,
   commonAnalyzerRecvInternalCliOptions,
   CommonAnalyzerRecvInternalArgs,
   ITERATION_LIMIT_OPTION,
@@ -55,6 +55,9 @@ import {
   confirmLongRunningAnalysis,
   confirmOpcodeExtractionWait,
   hasExplicitTimeout,
+  parseBalanceArg,
+  parseDataArg,
+  prepareContract,
 } from "./command-utils.js";
 
 interface CheckResult {
@@ -178,6 +181,8 @@ async function runOpcodeInfoCheck(
   iterationLimit: number,
   recursionLimit: number,
   interactive: boolean,
+  balance: bigint | null,
+  data: string | null,
 ): Promise<OpcodeInfo[]> {
   // Calculate timeout per opcode
   let opcodeTimeout: number | null = null;
@@ -197,6 +202,8 @@ async function runOpcodeInfoCheck(
     recursionLimit,
     interactive,
     legacyAnalysisArtifacts,
+    balance,
+    data,
   };
 
   const results: OpcodeInfo[] = [];
@@ -250,6 +257,8 @@ async function runReplayAttackCheck(
   recursionLimit: number,
   legacyAnalysisArtifacts: boolean,
   interactive: boolean,
+  balance: bigint | null,
+  data: string | null,
 ): Promise<CheckResult> {
   const analyzer = await runReplayAttackCheckAnalysis(
     ui,
@@ -262,6 +271,8 @@ async function runReplayAttackCheck(
       recursionLimit,
       interactive,
       legacyAnalysisArtifacts,
+      balance,
+      data,
     },
     null,
     `${REPLAY_ATTACK_CHECK_NAME} completed.`,
@@ -428,14 +439,14 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
   const ownerMethod = parsedArgs["owner-method"];
   const disableOpcodeExtraction = parsedArgs["disable-opcode-extraction"];
   const verbose = parsedArgs.verbose;
+  const balance = parseBalanceArg(ui, parsedArgs[BALANCE_OPTION]);
 
-  await buildAllContracts(ui, parsedArgs.interactive);
-  const contractPath = findCompiledContract(contractName);
-
-  if (!existsSync(contractPath)) {
-    ui.write(`\n${Sym.ERR} Contract ${contractName} not found`);
-    process.exit(1);
-  }
+  const { codePath: contractPath, dataPath } = await prepareContract(
+    ui,
+    contractName,
+    parsedArgs.interactive,
+    parseDataArg(ui, parsedArgs[DATA_OPTION]),
+  );
 
   const checkCount = ownerMethod ? 5 : 4;
   const explicitTimeout = parsedArgs.timeout ?? null;
@@ -517,6 +528,8 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     parsedArgs[ITERATION_LIMIT_OPTION],
     parsedArgs[RECURSION_LIMIT_OPTION],
     parsedArgs.interactive,
+    balance,
+    dataPath,
   );
 
   // Run drain-check
@@ -531,6 +544,8 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
     interactive: parsedArgs.interactive,
     legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
+    balance,
+    data: dataPath,
   };
 
   const drainResult = await runDrainCheck(
@@ -554,6 +569,8 @@ const auditCommand = async (ui: UIProvider, parsedArgs: AuditSchema) => {
     commonArgs.recursionLimit,
     commonArgs.legacyAnalysisArtifacts ?? false,
     parsedArgs.interactive,
+    balance,
+    dataPath,
   );
   summary.checks.push(replayResult);
 

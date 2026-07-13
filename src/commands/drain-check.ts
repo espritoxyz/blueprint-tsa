@@ -16,13 +16,14 @@ import {
   ERROR_EXIT_CODE,
   DRAIN_DESCRIPTION_URL,
 } from "../common/constants.js";
-import { buildAllContracts } from "../common/build-utils.js";
 import {
   getCheckerPath,
   getSarifReportPath,
   getReportDirectory,
 } from "../common/paths.js";
 import {
+  BALANCE_OPTION,
+  DATA_OPTION,
   CommonAnalyzerRecvInternalArgs,
   commonAnalyzerRecvInternalCliOptions,
   generateFlagsFromCommonRecvInternalArgs,
@@ -32,12 +33,14 @@ import {
   VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
 import {
-  resolveBuiltContract,
+  prepareContract,
   resolveOpcodesAndTimeout,
   reportAndExit,
   readNanotons,
   confirmLongRunningAnalysis,
   hasExplicitTimeout,
+  parseBalanceArg,
+  parseDataArg,
 } from "./command-utils.js";
 
 const drainCheckOptions = {
@@ -143,8 +146,12 @@ const drainCheckCommand = async (
 ) => {
   const contractName = parsedArgs.contract;
 
-  await buildAllContracts(ui, parsedArgs.interactive);
-  const contractPath = resolveBuiltContract(ui, contractName);
+  const { codePath: contractPath, dataPath } = await prepareContract(
+    ui,
+    contractName,
+    parsedArgs.interactive,
+    parseDataArg(ui, parsedArgs[DATA_OPTION]),
+  );
 
   const { opcodes, timeout } = await resolveOpcodesAndTimeout(
     ui,
@@ -177,6 +184,8 @@ const drainCheckCommand = async (
     iterationLimit: parsedArgs[ITERATION_LIMIT_OPTION],
     recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
     legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
+    balance: parseBalanceArg(ui, parsedArgs[BALANCE_OPTION]),
+    data: dataPath,
   };
 
   const analyzer = await runDrainCheckAnalysis(ui, contractPath, commonArgs);
@@ -208,6 +217,7 @@ export const drainCheckConcrete = async (
           value: timeout !== null ? `${timeout} seconds` : "not set",
         },
         { key: "Sender", value: config.senderAddress.toRawString() },
+        { key: "Balance", value: `${config.balance} nanotons` },
       ],
     },
   ];

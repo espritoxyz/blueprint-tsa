@@ -24,6 +24,7 @@ import { CommandContext } from "../cli.js";
 import { CommandModule, InferredOptionTypes } from "yargs";
 import { TsaVulnerabilityConfigSchema } from "../reproduce/reproduce-config.js";
 import { nanotonToTon } from "../common/format-utils.js";
+import { loadContractCodeCell } from "../common/file-utils.js";
 
 const reproduceCommandCliOptions = {
   config: {
@@ -99,10 +100,9 @@ export const executeReproduceCommand = async (
   const network = await createNetworkProvider(ui, { _: [] });
 
   if (configJson.mode === DEPLOY_AND_REPRODUCE_COMMAND) {
-    const codeHex = JSON.parse(readFileSync(configJson.codePath, "utf-8")).hex;
     const dataBinary = readFileSync(configJson.dataPath);
     const config: DeployConfig = {
-      code: Cell.fromBoc(Buffer.from(codeHex, "hex"))[0],
+      code: loadContractCodeCell(configJson.codePath),
       data: Cell.fromBoc(dataBinary)[0],
       suggestedBalance: BigInt(configJson.suggestedBalance),
       suggestedValue: BigInt(configJson.suggestedValue),
