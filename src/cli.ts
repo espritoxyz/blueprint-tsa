@@ -8,6 +8,7 @@ import { createReplayAttackCheckCommand } from "./commands/replay-attack-check.j
 import { createOpcodeInfoCommand } from "./commands/opcode-info.js";
 import { createAuditCommand } from "./commands/audit.js";
 import { createBounceCheckCommand } from "./commands/bounce-check.js";
+import { createFetchContractCommand } from "./commands/fetch-contract.js";
 
 export interface CommandContext {
   ui: UIProvider;
@@ -39,6 +40,7 @@ export const createCLI = (context: CommandContext) => {
     .command(createReproduceCommand(context))
     .command(createOpcodeInfoCommand(context))
     .command(createAuditCommand(context))
+    .command(createFetchContractCommand(context))
     .demandCommand(1, "Please specify a subcommand")
     .help()
     .alias("help", "h")

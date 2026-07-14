@@ -9,23 +9,23 @@ import {
   OPCODE_INFO_DESCRIPTION_URL,
 } from "../common/constants.js";
 import { UIProvider } from "@ton/blueprint";
+import { existsSync } from "fs";
 import { extractOpcodes } from "../common/opcode-extractor.js";
-import { buildAllContracts } from "../common/build-utils.js";
 import {
-  findCompiledContract,
   getSarifReportPath,
   getCheckerPath,
   getReportDirectory,
   getInputsPath,
   getCompactTypedInputPath,
 } from "../common/paths.js";
-import { existsSync } from "fs";
 import { AnalyzerWrapper } from "../common/analyzer-wrapper.js";
 import { beginCell } from "@ton/core";
 import { TreeProperty } from "../common/draw.js";
 import { formatOpcodeHex } from "../common/format-utils.js";
 import { findNonFailingExecution } from "../common/result-parsing.js";
 import {
+  BALANCE_OPTION,
+  DATA_OPTION,
   commonAnalyzerCliOptions,
   CommonAnalyzerArgs,
   generateFlagsFromCommonArgs,
@@ -37,6 +37,9 @@ import {
 import {
   confirmLongRunningAnalysis,
   confirmOpcodeExtractionWait,
+  parseBalanceArg,
+  parseDataArg,
+  prepareContract,
 } from "./command-utils.js";
 
 export interface OpcodeInfo {
@@ -236,13 +239,12 @@ const opcodeInfoHandler = async (
   const { ui } = context;
   const { timeout, contract, verbose } = args;
 
-  await buildAllContracts(ui, args.interactive as boolean);
-  const codePath = findCompiledContract(contract as string);
-
-  if (!existsSync(codePath)) {
-    ui.write(`\n${Sym.ERR} Contract ${contract} not found`);
-    process.exit(1);
-  }
+  const { codePath, dataPath } = await prepareContract(
+    ui,
+    contract as string,
+    args.interactive as boolean,
+    parseDataArg(ui, args[DATA_OPTION] as string | undefined),
+  );
 
   await confirmOpcodeExtractionWait(ui, {
     commandLabel: OPCODE_INFO,
@@ -274,6 +276,8 @@ const opcodeInfoHandler = async (
     recursionLimit: args[RECURSION_LIMIT_OPTION] as number,
     interactive: args.interactive as boolean,
     legacyAnalysisArtifacts: args[VERBOSE_ANALYSIS_ARTIFACTS_OPTION] as boolean,
+    balance: parseBalanceArg(ui, args[BALANCE_OPTION] as string | undefined),
+    data: dataPath,
   };
 
   await confirmLongRunningAnalysis(ui, {

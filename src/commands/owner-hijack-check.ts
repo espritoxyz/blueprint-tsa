@@ -16,13 +16,14 @@ import {
   ERROR_EXIT_CODE,
   OWNER_HIJACK_DESCRIPTION_URL,
 } from "../common/constants.js";
-import { buildAllContracts } from "../common/build-utils.js";
 import {
   getCheckerPath,
   getSarifReportPath,
   getReportDirectory,
 } from "../common/paths.js";
 import {
+  BALANCE_OPTION,
+  DATA_OPTION,
   CommonAnalyzerRecvInternalArgs,
   commonAnalyzerRecvInternalCliOptions,
   generateFlagsFromCommonRecvInternalArgs,
@@ -32,12 +33,14 @@ import {
   VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
 import {
-  resolveBuiltContract,
+  prepareContract,
   resolveOpcodesAndTimeout,
   reportAndExit,
   readNanotons,
   confirmLongRunningAnalysis,
   hasExplicitTimeout,
+  parseBalanceArg,
+  parseDataArg,
 } from "./command-utils.js";
 import { OwnerHijackOptions } from "../reproduce/reproduce-config.js";
 
@@ -162,8 +165,12 @@ const ownerHijackCheckCommand = async (
   const contractName = parsedArgs.contract;
   const methodId = BigInt(getMethodId(parsedArgs["method-name"]));
 
-  await buildAllContracts(ui, parsedArgs.interactive);
-  const contractPath = resolveBuiltContract(ui, contractName);
+  const { codePath: contractPath, dataPath } = await prepareContract(
+    ui,
+    contractName,
+    parsedArgs.interactive,
+    parseDataArg(ui, parsedArgs[DATA_OPTION]),
+  );
 
   const { opcodes, timeout } = await resolveOpcodesAndTimeout(
     ui,
@@ -201,6 +208,8 @@ const ownerHijackCheckCommand = async (
       recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
       interactive: parsedArgs.interactive,
       legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
+      balance: parseBalanceArg(ui, parsedArgs[BALANCE_OPTION]),
+      data: dataPath,
     },
   );
   reportAndExit(ui, analyzer, OWNER_HIJACK_DESCRIPTION_URL);
@@ -244,6 +253,7 @@ export const ownerHijackCheckConcrete = async (
         },
         { key: "Method id", value: methodId.toString() },
         { key: "Sender", value: config.senderAddress.toRawString() },
+        { key: "Balance", value: `${config.balance} nanotons` },
       ],
     },
   ];

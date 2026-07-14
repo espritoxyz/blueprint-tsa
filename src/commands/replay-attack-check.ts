@@ -11,13 +11,14 @@ import {
   REPLAY_DESCRIPTION_URL,
   Sym,
 } from "../common/constants.js";
-import { buildAllContracts } from "../common/build-utils.js";
 import {
   getCheckerPath,
   getSarifReportPath,
   getReportDirectory,
 } from "../common/paths.js";
 import {
+  BALANCE_OPTION,
+  DATA_OPTION,
   commonAnalyzerCliOptions,
   CommonAnalyzerArgs,
   generateFlagsFromCommonArgs,
@@ -27,9 +28,11 @@ import {
   VERBOSE_ANALYSIS_ARTIFACTS_OPTION,
 } from "./common-analyzer-args.js";
 import {
-  resolveBuiltContract,
+  prepareContract,
   reportAndExit,
   confirmLongRunningAnalysis,
+  parseBalanceArg,
+  parseDataArg,
 } from "./command-utils.js";
 
 const replayAttackCheckCliOptions = {
@@ -177,8 +180,12 @@ const replayAttackCheckCommand = async (
 ) => {
   const contractName = parsedArgs.contract;
 
-  await buildAllContracts(ui, parsedArgs.interactive);
-  const contractPath = resolveBuiltContract(ui, contractName);
+  const { codePath: contractPath, dataPath } = await prepareContract(
+    ui,
+    contractName,
+    parsedArgs.interactive,
+    parseDataArg(ui, parsedArgs[DATA_OPTION]),
+  );
 
   const timeout = parsedArgs.timeout ?? null;
 
@@ -207,6 +214,8 @@ const replayAttackCheckCommand = async (
       recursionLimit: parsedArgs[RECURSION_LIMIT_OPTION],
       interactive: parsedArgs.interactive,
       legacyAnalysisArtifacts: parsedArgs[VERBOSE_ANALYSIS_ARTIFACTS_OPTION],
+      balance: parseBalanceArg(ui, parsedArgs[BALANCE_OPTION]),
+      data: dataPath,
     },
     seqnoData,
   );

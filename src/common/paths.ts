@@ -48,6 +48,30 @@ export const findCompiledContract = (name: string): string => {
   return path.join(BUILD_DIR, name + ".compiled.json");
 };
 
+export const getTSABocDirectoryPath = (): string => {
+  return path.join(process.cwd(), "tsa", "boc");
+};
+
+export const findTSABocDirectory = (): string => {
+  const result = getTSABocDirectoryPath();
+  if (!fs.existsSync(result)) {
+    fs.mkdirSync(result, { recursive: true });
+  }
+  return result;
+};
+
+export const getRemoteContractPath = (name: string): string => {
+  return path.join(getTSABocDirectoryPath(), `${name}.boc`);
+};
+
+export const getRemoteContractMetaPath = (name: string): string => {
+  return path.join(getTSABocDirectoryPath(), `${name}.meta.json`);
+};
+
+export const getRemoteContractDataPath = (name: string): string => {
+  return path.join(getTSABocDirectoryPath(), `${name}.data.boc`);
+};
+
 export const findJavaBinPath = (): string | null => {
   const tsaHome = findTSAHomeDirectory();
   const jre = path.join(tsaHome, "jre");

@@ -5,7 +5,7 @@ export class Sym {
   public static WAIT = "⏳";
 }
 
-export const TSA_VERSION = "v0.5.3";
+export const TSA_VERSION = "v0.5.5";
 export const TSA_NAME = `tsa-cli-${TSA_VERSION}.jar`;
 export const TSA_URL = `https://github.com/espritoxyz/tsa/releases/download/${TSA_VERSION}/tsa-cli.jar`;
 
@@ -43,6 +43,8 @@ export const OPCODE_INFO_DESCRIPTION_URL =
   "https://tonsec.dev/docs/builtin-checkers#opcode-authorization-check";
 
 export const AUDIT_ID = "audit";
+
+export const FETCH_CONTRACT_ID = "fetch-contract";
 
 export const DRAIN_CHECK_NAME = "Drain Check";
 export const REPLAY_ATTACK_CHECK_NAME = "Replay Attack Check";
